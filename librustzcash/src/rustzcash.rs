@@ -359,6 +359,8 @@ pub extern "system" fn librustzcash_ask_to_ak(
     result: *mut [c_uchar; 32],
 ) {
     let ask = unsafe { &*ask };
+    println!("OMER TEST");
+    let ask:&[u8;32] = &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1];
     let ak = fixed_scalar_mult(ask, FixedGenerators::SpendingKeyGenerator);
 
     let result = unsafe { &mut *result };
