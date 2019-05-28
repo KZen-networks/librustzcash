@@ -360,7 +360,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
 ) {
     let ask = unsafe { &*ask };
     println!("OMER TEST");
-    let ask:&[u8;32] = &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1];
+    let ask:&[u8;32] = &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
     let ak = fixed_scalar_mult(ask, FixedGenerators::SpendingKeyGenerator);
 
     let result = unsafe { &mut *result };
@@ -1096,8 +1096,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     );
 
     // Write out the signature
-    //sig.write(&mut (unsafe { &mut *result })[..])
-    sig.write(&mut (unsafe { &mut *result })[0..32])
+    sig.write(&mut (unsafe { &mut *result })[..])
         .expect("result should be 64 bytes");
 
     true
