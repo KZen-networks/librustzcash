@@ -1060,6 +1060,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     sighash: *const [c_uchar; 32],
     result: *mut [c_uchar; 64],
 ) -> bool {
+    println!("OMER TEST Sign");
     // The caller provides the re-randomization of `ak`.
     let ar = match Fs::from_repr(read_fs(&(unsafe { &*ar })[..])) {
         Ok(p) => p,
@@ -1095,7 +1096,8 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     );
 
     // Write out the signature
-    sig.write(&mut (unsafe { &mut *result })[..])
+    //sig.write(&mut (unsafe { &mut *result })[..])
+    sig.write(&mut (unsafe { &mut *result })[0..32])
         .expect("result should be 64 bytes");
 
     true
