@@ -29,11 +29,6 @@ serde_json = "1.0"
 [dependencies.paradise-city]
 git = "https://github.com/KZen-networks/paradise-city"
 
-[dependencies.curv]
-git = "https://github.com/KZen-networks/curv"
-features =  ["ec_jubjub"]
-branch = "blake_support"
-
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"

@@ -15,7 +15,6 @@ mod hashreader;
 
 #[macro_use]
 extern crate lazy_static;
-extern crate curv;
 
 use pairing::{
     bls12_381::{Bls12, Fr, FrRepr},
@@ -376,12 +375,12 @@ use paradise_city::protocols::two_party::party_two::KeyGenFirstMsg as Party2KeyG
 use paradise_city::protocols::two_party::party_two::KeyGenSecondMsg as Party2KeyGenSecondMsg;
 use paradise_city::protocols::two_party::party_two::LocalSignatureMsg as Party2LocalSignatureMsg;
 use paradise_city::protocols::two_party::EcKeyPair;
-use curv::elliptic::curves::traits::{ECPoint, ECScalar};
+use paradise_city::curv::elliptic::curves::traits::{ECPoint, ECScalar};
 use std::env;
 use std::fs;
-use curv::elliptic::curves::curve_jubjub::GE;
-use curv::BigInt;
-use curv::arithmetic::traits::Converter;
+use paradise_city::curv::elliptic::curves::curve_jubjub::GE;
+use paradise_city::curv::arithmetic::big_gmp::BigInt;
+use paradise_city::curv::arithmetic::traits::Converter;
 
 #[no_mangle]
 pub extern "system" fn librustzcash_ask_to_ak(
