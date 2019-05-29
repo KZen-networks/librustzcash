@@ -17,12 +17,23 @@ crate-type = ["staticlib"]
 bellman = { path = "../bellman" }
 libc = "0.2"
 pairing = { path = "../pairing" }
-lazy_static = "1"
+lazy_static = "1.2"
 byteorder = "1"
 rand = "0.4"
 sapling-crypto = { path = "../sapling-crypto" }
 zcash_proofs = { path = "../zcash_proofs" }
 zip32 = { path = "../zip32" }
+
+serde_json = "1.0"
+
+[dependencies.paradise-city]
+git = "https://github.com/KZen-networks/paradise-city"
+
+[dependencies.curv]
+git = "https://github.com/KZen-networks/curv"
+features =  ["ec_jubjub"]
+branch = "blake_support"
+
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"

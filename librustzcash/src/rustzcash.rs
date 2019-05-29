@@ -8,10 +8,14 @@ extern crate sapling_crypto;
 extern crate zcash_proofs;
 extern crate zip32;
 
+extern crate paradise_city;
+extern crate serde_json;
+
 mod hashreader;
 
 #[macro_use]
 extern crate lazy_static;
+extern crate curv;
 
 use pairing::{
     bls12_381::{Bls12, Fr, FrRepr},
@@ -353,6 +357,115 @@ pub extern "system" fn librustzcash_to_scalar(
         .expect("length is 32 bytes");
 }
 
+
+use paradise_city::protocols::two_party::compute_R;
+use paradise_city::protocols::two_party::compute_ak;
+use paradise_city::protocols::two_party::compute_vk;
+use paradise_city::protocols::two_party::party_one::CoinFlipFirstMsg as Party1CFFirstMsg;
+use paradise_city::protocols::two_party::party_one::CoinFlipSecondMsg as Party1CFSecondMsg;
+use paradise_city::protocols::two_party::party_one::EphKeyGenFirstMsg as Party1EphKeyGenFirstMsg;
+use paradise_city::protocols::two_party::party_one::EphKeyGenSecondMsg as Party1EphKeyGenSecondMsg;
+use paradise_city::protocols::two_party::party_one::KeyGenFirstMsg as Party1KeyGenFirstMsg;
+use paradise_city::protocols::two_party::party_one::KeyGenSecondMsg as Party1KeyGenSecondMsg;
+use paradise_city::protocols::two_party::party_one::LocalSignatureMsg as Party1LocalSignatureMsg;
+use paradise_city::protocols::two_party::party_two::CoinFlipFirstMsg as Party2CFFirstMsg;
+use paradise_city::protocols::two_party::party_two::CoinFlipResult;
+use paradise_city::protocols::two_party::party_two::EphKeyGenFirstMsg as Party2EphKeyGenFirstMsg;
+use paradise_city::protocols::two_party::party_two::EphKeyGenSecondMsg as Party2EphKeyGenSecondMsg;
+use paradise_city::protocols::two_party::party_two::KeyGenFirstMsg as Party2KeyGenFirstMsg;
+use paradise_city::protocols::two_party::party_two::KeyGenSecondMsg as Party2KeyGenSecondMsg;
+use paradise_city::protocols::two_party::party_two::LocalSignatureMsg as Party2LocalSignatureMsg;
+use paradise_city::protocols::two_party::EcKeyPair;
+use curv::elliptic::curves::traits::{ECPoint, ECScalar};
+use std::env;
+use std::fs;
+use curv::elliptic::curves::curve_jubjub::GE;
+use curv::BigInt;
+use curv::arithmetic::traits::Converter;
+
+#[no_mangle]
+pub extern "system" fn librustzcash_ask_to_ak(
+    ask: *const [c_uchar; 32],
+    result: *mut [c_uchar; 32],
+) {
+
+    // if keygen was called before use the result:
+    let data = fs::read_to_string("key1");
+        let (maybe_ak, party1_keys) = match data{
+           Ok(x) => {
+
+               let (ak_party1, party1_keys):
+               (GE, EcKeyPair)
+                = serde_json::from_str(&x).unwrap();
+               (ak_party1, party1_keys)
+           },
+            Err(_) =>{
+                let (_, _, ec_key_pair) =
+                    Party1KeyGenFirstMsg::create_commitments();
+
+                (ECPoint::generator(), ec_key_pair)
+            }
+        };
+    if maybe_ak == ECPoint::generator() {
+
+
+        // round 1
+        // party1:
+        let (party1_first_message, comm_witness, party1_keys) =
+            Party1KeyGenFirstMsg::create_commitments();
+        // party2:
+        let (party2_first_message, party2_keys) = Party2KeyGenFirstMsg::create();
+        // round 2
+        // party1
+        let party1_second_message = Party1KeyGenSecondMsg::verify_and_decommit(
+            comm_witness,
+            &party2_first_message.d_log_proof,
+        )
+            .expect("failed to verify and decommit");
+        // compute ak:
+        let party1_ak = compute_ak(&party1_keys, &party2_first_message.public_share);
+        // party2
+        let _party_two_second_message = Party2KeyGenSecondMsg::verify_commitments_and_dlog_proof(
+            &party1_first_message,
+            &party1_second_message,
+        )
+            .expect("failed to verify commitments and DLog proof");
+        let party2_ak = compute_ak(
+            &party2_keys,
+            &party1_second_message.comm_witness.public_share,
+        );
+
+        assert_eq!(party1_ak, party2_ak);
+
+
+        let ak = party1_ak.get_element();
+        let result = unsafe { &mut *result };
+
+        ak.write(&mut result[..]).expect("length is 32 bytes");
+        let party1_keygen_json = serde_json::to_string(&(
+            party1_ak,
+            party1_keys,
+        ))
+            .unwrap();
+
+        let party2_keygen_json = serde_json::to_string(&(
+            party2_ak,
+            party2_keys,
+        ))
+            .unwrap();
+        fs::write("key1", party1_keygen_json).expect("Unable to save !");
+        fs::write("key2", party2_keygen_json).expect("Unable to save !");
+    }
+    else{
+        let ak = maybe_ak.get_element();
+        let result = unsafe { &mut *result };
+
+        ak.write(&mut result[..]).expect("length is 32 bytes");
+    }
+
+}
+
+/*
 #[no_mangle]
 pub extern "system" fn librustzcash_ask_to_ak(
     ask: *const [c_uchar; 32],
@@ -368,6 +481,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
     ak.write(&mut result[..]).expect("length is 32 bytes");
 }
 
+*/
 #[no_mangle]
 pub extern "system" fn librustzcash_nsk_to_nk(
     nsk: *const [c_uchar; 32],
@@ -1060,6 +1174,145 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     sighash: *const [c_uchar; 32],
     result: *mut [c_uchar; 64],
 ) -> bool {
+    println!("Start Sign");
+    let data = fs::read_to_string("keys1")
+        .expect("Unable to load keys, did you run keygen first? ");
+    let (party1_ak, party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+
+    let data = fs::read_to_string("keys2")
+        .expect("Unable to load keys, did you run keygen first? ");
+    let (party2_ak, party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+
+
+    let public_key = party1_ak;
+
+    // Compute the signature's message for rk/spend_auth_sig
+    let mut data_to_be_signed = [0u8; 64];
+    (&mut data_to_be_signed[32..64]).copy_from_slice(&(unsafe { &*sighash })[..]);
+
+    let message = BigInt::from(&data_to_be_signed[..]);
+    // round 1
+    // party1
+    let (party1_cf_first_message, party1_cf_seed, party1_cf_blinding) =
+        Party1CFFirstMsg::commit();
+    // party2
+    let party2_cf_first_message = Party2CFFirstMsg::share(&party1_cf_first_message);
+    // round 2
+    // party1
+    let (party1_cf_second_message, party1_alpha) =
+        Party1CFSecondMsg::reveal(&party2_cf_first_message, party1_cf_seed, party1_cf_blinding);
+    let party1_vk = compute_vk(&public_key, &party1_alpha);
+    // party2
+    let coin_flip_res = CoinFlipResult::finalize(
+        &party1_cf_second_message,
+        &party2_cf_first_message,
+        &party1_cf_first_message,
+    );
+
+    let party2_vk = compute_vk(&public_key, &coin_flip_res.party2_alpha);
+
+    assert_eq!(party1_vk, party2_vk);
+
+    // round 3
+    // party1:
+    let (party1_eph_first_message, party1_comm_witness, party1_eph_keys) =
+        Party1EphKeyGenFirstMsg::create_commitments(&party1_vk, &message);
+    // party2:
+    let (party2_eph_first_message, party2_eph_keys) =
+        Party2EphKeyGenFirstMsg::create(&party2_vk, &message);
+    // round 4
+    // party1
+    let party1_eph_second_message = Party1EphKeyGenSecondMsg::verify_and_decommit(
+        party1_comm_witness,
+        &party2_eph_first_message,
+    )
+        .expect("failed to verify and decommit");
+    // compute R:
+    let party1_R = compute_R(&party1_eph_keys, &party2_eph_first_message.public_share);
+    // party2
+    let _party_two_second_message =
+        Party2EphKeyGenSecondMsg::verify_commitments_and_dlog_proof(
+            &party1_eph_first_message,
+            &party1_eph_second_message,
+        )
+            .expect("failed to verify commitments and DLog proof");
+    let party2_R = compute_R(
+        &party2_eph_keys,
+        &party1_eph_second_message.comm_witness.public_share,
+    );
+
+    assert_eq!(party1_R, party2_R);
+
+    // round 5
+    // party1
+    let party1_local_sig = Party1LocalSignatureMsg::compute_s1(
+        &party1_R,
+        &party1_vk,
+        party1_keys,
+        party1_eph_keys,
+        &message,
+        &party1_alpha,
+    );
+    // party2
+    let party2_local_sig = Party2LocalSignatureMsg::compute_s2(
+        &party2_R,
+        &party2_vk,
+        party2_keys,
+        party2_eph_keys,
+        &message,
+    );
+
+    // party1
+    let party1_sig = Party1LocalSignatureMsg::compute(
+        party1_R,
+        party1_vk,
+        &party1_local_sig,
+        &party2_local_sig,
+        &message,
+    );
+    // party2
+    let party2_sig = Party2LocalSignatureMsg::compute(
+        party2_R,
+        party2_vk,
+        &party2_local_sig,
+        &party1_local_sig,
+        &message,
+    );
+
+    assert_eq!(party1_sig, party2_sig);
+
+
+    // serialize sig:
+    let mut r_bytes = &party1_sig.R.pk_to_key_slice()[0..32];
+    let mut s_bytes = &BigInt::to_vec(&(party1_sig.s.to_big_int()))[0..32];
+    let mut rbar = [0u8;32];
+    let mut sbar = [0u8;32];
+
+    rbar.clone_from_slice(&r_bytes[..]);
+    sbar.clone_from_slice(&s_bytes[..]);
+
+    let sig_new = Signature{
+        rbar,
+        sbar,
+    };
+   // let sig1 = [&r_bytes[..], &s_bytes[..]].concat();
+    // Write out the signature
+    sig_new.write(&mut (unsafe { &mut *result })[..])
+        .expect("result should be 64 bytes");
+    println!("End Sign");
+
+    true
+}
+
+
+/*
+#[no_mangle]
+pub extern "system" fn librustzcash_sapling_spend_sig(
+    ask: *const [c_uchar; 32],
+    ar: *const [c_uchar; 32],
+    sighash: *const [c_uchar; 32],
+    result: *mut [c_uchar; 64],
+) -> bool {
     println!("OMER TEST Sign");
     // The caller provides the re-randomization of `ak`.
     let ar = match Fs::from_repr(read_fs(&(unsafe { &*ar })[..])) {
@@ -1102,6 +1355,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     true
 }
 
+*/
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_binding_sig(
     ctx: *const SaplingProvingContext,
