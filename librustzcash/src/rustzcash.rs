@@ -389,7 +389,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
 ) {
 
     // if keygen was called before use the result:
-    let data = fs::read_to_string("key1zcash");
+    let data = fs::read_to_string("keys1zcash");
         let (maybe_ak, party1_keys) = match data{
            Ok(x) => {
 
@@ -452,8 +452,8 @@ pub extern "system" fn librustzcash_ask_to_ak(
             party2_keys,
         ))
             .unwrap();
-        fs::write("key1zcash", party1_keygen_json).expect("Unable to save !");
-        fs::write("key2", party2_keygen_json).expect("Unable to save !");
+        fs::write("keys1zcash", party1_keygen_json).expect("Unable to save !");
+        fs::write("keys2", party2_keygen_json).expect("Unable to save !");
     }
     else{
         let ak = maybe_ak.get_element();
@@ -1174,7 +1174,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     result: *mut [c_uchar; 64],
 ) -> bool {
     println!("Start Sign");
-    let data = fs::read_to_string("keys1")
+    let data = fs::read_to_string("keys1zcash")
         .expect("Unable to load keys, did you run keygen first? ");
     let (party1_ak, party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
 
@@ -1374,7 +1374,7 @@ pub extern "system" fn librustzcash_sapling_binding_sig(
 
     true
 }
-
+/*
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_proof(
     ctx: *mut SaplingProvingContext,
@@ -1402,6 +1402,127 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
         None => return false,
     };
 
+    // Grab `nsk` from the caller
+    let nsk = match Fs::from_repr(read_fs(&(unsafe { &*nsk })[..])) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    // Construct the proof generation key
+    let proof_generation_key = ProofGenerationKey {
+        ak: ak.clone(),
+        nsk,
+    };
+
+    // Grab the diversifier from the caller
+    let diversifier = sapling_crypto::primitives::Diversifier(unsafe { *diversifier });
+
+    // The caller chooses the note randomness
+    let rcm = match Fs::from_repr(read_fs(&(unsafe { &*rcm })[..])) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    // The caller also chooses the re-randomization of ak
+    let ar = match Fs::from_repr(read_fs(&(unsafe { &*ar })[..])) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    // We need to compute the anchor of the Spend.
+    let anchor = match Fr::from_repr(read_le(unsafe { &(&*anchor)[..] })) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    // The witness contains the incremental tree witness information, in a
+    // weird serialized format.
+    let witness = match CommitmentTreeWitness::from_slice(unsafe { &(&*witness)[..] }) {
+        Ok(w) => w,
+        Err(_) => return false,
+    };
+
+    // Create proof
+    let (proof, value_commitment, rk) = unsafe { &mut *ctx }
+        .spend_proof(
+            proof_generation_key,
+            diversifier,
+            rcm,
+            ar,
+            value,
+            anchor,
+            witness,
+            unsafe { SAPLING_SPEND_PARAMS.as_ref() }.unwrap(),
+            unsafe { SAPLING_SPEND_VK.as_ref() }.unwrap(),
+            &JUBJUB,
+        )
+        .expect("proving should not fail");
+
+    // Write value commitment to caller
+    value_commitment
+        .write(&mut unsafe { &mut *cv }[..])
+        .expect("should be able to serialize cv");
+
+    // Write proof out to caller
+    proof
+        .write(&mut (unsafe { &mut *zkproof })[..])
+        .expect("should be able to serialize a proof");
+
+    // Write out `rk` to the caller
+    rk.write(&mut unsafe { &mut *rk_out }[..])
+        .expect("should be able to write to rk_out");
+
+    true
+}
+*/
+
+use sapling_crypto::jubjub::JubjubBls12 as jjbls12_l;
+#[no_mangle]
+pub extern "system" fn librustzcash_sapling_spend_proof(
+    ctx: *mut SaplingProvingContext,
+    ak: *const [c_uchar; 32],
+    nsk: *const [c_uchar; 32],
+    diversifier: *const [c_uchar; 11],
+    rcm: *const [c_uchar; 32],
+    ar: *const [c_uchar; 32],
+    value: uint64_t,
+    anchor: *const [c_uchar; 32],
+    witness: *const [c_uchar; 1 + 33 * SAPLING_TREE_DEPTH + 8],
+    cv: *mut [c_uchar; 32],
+    rk_out: *mut [c_uchar; 32],
+    zkproof: *mut [c_uchar; GROTH_PROOF_SIZE],
+) -> bool {
+
+    let data = fs::read_to_string("keys1zcash")
+        .expect("Unable to load keys, did you run keygen first? ");
+    let (party1_ak, party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+
+    let ak = party1_ak.get_element();
+    let mut vec = Vec::new();
+    ak.write(&mut vec).unwrap();
+    let ak = match edwards::Point::<Bls12, Unknown>::read(&vec[..], &JUBJUB) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    let ak = match ak.as_prime_order(&JUBJUB) {
+        Some(p) => p,
+        None => return false,
+    };
+
+    /*
+    // Grab `ak` from the caller, which should be a point.
+    let ak = match edwards::Point::<Bls12, Unknown>::read(&(unsafe { &*ak })[..], &JUBJUB) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    // `ak` should be prime order.
+    let ak = match ak.as_prime_order(&JUBJUB) {
+        Some(p) => p,
+        None => return false,
+    };
+    */
     // Grab `nsk` from the caller
     let nsk = match Fs::from_repr(read_fs(&(unsafe { &*nsk })[..])) {
         Ok(p) => p,
