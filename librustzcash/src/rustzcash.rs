@@ -389,7 +389,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
 ) {
 
     // if keygen was called before use the result:
-    let data = fs::read_to_string("key1");
+    let data = fs::read_to_string("key1zcash");
         let (maybe_ak, party1_keys) = match data{
            Ok(x) => {
 
@@ -452,7 +452,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
             party2_keys,
         ))
             .unwrap();
-        fs::write("key1", party1_keygen_json).expect("Unable to save !");
+        fs::write("key1zcash", party1_keygen_json).expect("Unable to save !");
         fs::write("key2", party2_keygen_json).expect("Unable to save !");
     }
     else{
@@ -471,7 +471,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
     result: *mut [c_uchar; 32],
 ) {
     let ask = unsafe { &*ask };
-    println!("OMER TEST");
+    println!("OMER TEST keygen");
     let ask:&[u8;32] = &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
     let ak = fixed_scalar_mult(ask, FixedGenerators::SpendingKeyGenerator);
 
