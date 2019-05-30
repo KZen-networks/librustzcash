@@ -31,8 +31,8 @@ fn h_star<E: JubjubEngine>(a: &[u8], b: &[u8]) -> E::Fs {
 
 #[derive(Copy, Clone)]
 pub struct Signature {
-    rbar: [u8; 32],
-    sbar: [u8; 32],
+    pub rbar: [u8; 32],
+    pub sbar: [u8; 32],
 }
 
 pub struct PrivateKey<E: JubjubEngine>(pub E::Fs);
