@@ -562,23 +562,7 @@ fn test_gen_r() {
     let _ = Fs::from_repr(repr).unwrap();
 }
 
-/// Return 32 byte random scalar, uniformly.
-#[no_mangle]
-pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32]) {
-    // create random 64 byte buffer
-    let mut rng = OsRng::new().expect("should be able to construct RNG");
-    let mut buffer = [0u8; 64];
-    for i in 0..buffer.len() {
-        buffer[i] = rng.gen();
-    }
 
-    // reduce to uniform value
-    let r = <Bls12 as JubjubEngine>::Fs::to_uniform(&buffer[..]);
-    let result = unsafe { &mut *result };
-    r.into_repr()
-        .write_le(&mut result[..])
-        .expect("result must be 32 bytes");
-}
 
 // Private utility function to get Note from C parameters
 fn priv_get_note(
@@ -1166,6 +1150,70 @@ pub extern "system" fn librustzcash_sapling_output_proof(
     true
 }
 
+/*
+/// Return 32 byte random scalar, uniformly.
+#[no_mangle]
+pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32]) {
+    // create random 64 byte buffer
+    let mut rng = OsRng::new().expect("should be able to construct RNG");
+    let mut buffer = [0u8; 64];
+    for i in 0..buffer.len() {
+        buffer[i] = rng.gen();
+    }
+
+    // reduce to uniform value
+    let r = <Bls12 as JubjubEngine>::Fs::to_uniform(&buffer[..]);
+    let result = unsafe { &mut *result };
+    r.into_repr()
+        .write_le(&mut result[..])
+        .expect("result must be 32 bytes");
+}
+*/
+
+/// Return 32 byte random scalar, uniformly.
+#[no_mangle]
+pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32]) {
+    // round 1
+    // party1
+    let (party1_cf_first_message, party1_cf_seed, party1_cf_blinding) =
+        Party1CFFirstMsg::commit();
+    // party2
+    let party2_cf_first_message = Party2CFFirstMsg::share(&party1_cf_first_message);
+    // round 2
+    // party1
+    let (party1_cf_second_message, party1_alpha) =
+        Party1CFSecondMsg::reveal(&party2_cf_first_message, party1_cf_seed, party1_cf_blinding);
+
+    // party2
+    let coin_flip_res = CoinFlipResult::finalize(
+        &party1_cf_second_message,
+        &party2_cf_first_message,
+        &party1_cf_first_message,
+    );
+
+    let result = unsafe { &mut *result };
+
+    let party1_alpha_bn = party1_alpha.to_big_int();
+    let party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
+    let r = <Bls12 as JubjubEngine>::Fs::to_uniform(&party1_alpha_bytes[..]);
+    let result = unsafe { &mut *result };
+    r.into_repr()
+        .write_le(&mut result[..])
+        .expect("result must be 32 bytes");
+
+    let party1_randomize_json = serde_json::to_string(&(
+        party1_alpha
+    ))
+        .unwrap();
+
+    let party2_randomize_json = serde_json::to_string(&(
+        coin_flip_res.party2_alpha,
+    ))
+        .unwrap();
+    fs::write("party1_alpha", party1_randomize_json).expect("Unable to save !");
+    fs::write("party2_alpha", party2_randomize_json).expect("Unable to save !");
+}
+
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_sig(
     ask: *const [c_uchar; 32],
@@ -1182,35 +1230,30 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
         .expect("Unable to load keys, did you run keygen first? ");
     let (party2_ak, party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
 
+    let data = fs::read_to_string("party1_alpha")
+        .expect("Unable to load alpha ");
+    let (party1_alpha): (FE)  = serde_json::from_str(&data).unwrap();
+
+    let data = fs::read_to_string("party2_alpha")
+        .expect("Unable to load alpha ");
+    let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
 
     let public_key = party1_ak;
 
+
+
+    let party1_vk = compute_vk(&public_key, &party1_alpha);
+    let party2_vk = compute_vk(&public_key, &party2_alpha);
+
+    assert_eq!(party1_vk, party2_vk);
+
     // Compute the signature's message for rk/spend_auth_sig
     let mut data_to_be_signed = [0u8; 64];
+    party1_vk.get_element().write(&mut data_to_be_signed[0..32])
+        .expect("message buffer should be 32 bytes");
     (&mut data_to_be_signed[32..64]).copy_from_slice(&(unsafe { &*sighash })[..]);
 
     let message = BigInt::from(&data_to_be_signed[..]);
-    // round 1
-    // party1
-    let (party1_cf_first_message, party1_cf_seed, party1_cf_blinding) =
-        Party1CFFirstMsg::commit();
-    // party2
-    let party2_cf_first_message = Party2CFFirstMsg::share(&party1_cf_first_message);
-    // round 2
-    // party1
-    let (party1_cf_second_message, party1_alpha) =
-        Party1CFSecondMsg::reveal(&party2_cf_first_message, party1_cf_seed, party1_cf_blinding);
-    let party1_vk = compute_vk(&public_key, &party1_alpha);
-    // party2
-    let coin_flip_res = CoinFlipResult::finalize(
-        &party1_cf_second_message,
-        &party2_cf_first_message,
-        &party1_cf_first_message,
-    );
-
-    let party2_vk = compute_vk(&public_key, &coin_flip_res.party2_alpha);
-
-    assert_eq!(party1_vk, party2_vk);
 
     // round 3
     // party1:
@@ -1353,8 +1396,8 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
     true
 }
-
 */
+
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_binding_sig(
     ctx: *const SaplingProvingContext,
@@ -1477,6 +1520,8 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
 */
 
 use sapling_crypto::jubjub::JubjubBls12 as jjbls12_l;
+use paradise_city::curv::elliptic::curves::curve_jubjub::FE;
+
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_proof(
     ctx: *mut SaplingProvingContext,
