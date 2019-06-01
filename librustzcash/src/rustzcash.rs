@@ -382,6 +382,7 @@ use paradise_city::curv::elliptic::curves::curve_jubjub::GE;
 use paradise_city::curv::arithmetic::big_gmp::BigInt;
 use paradise_city::curv::arithmetic::traits::Converter;
 
+/*
 #[no_mangle]
 pub extern "system" fn librustzcash_ask_to_ak(
     ask: *const [c_uchar; 32],
@@ -464,7 +465,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
 
 }
 
-/*
+*/
 #[no_mangle]
 pub extern "system" fn librustzcash_ask_to_ak(
     ask: *const [c_uchar; 32],
@@ -480,7 +481,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
     ak.write(&mut result[..]).expect("length is 32 bytes");
 }
 
-*/
+
 #[no_mangle]
 pub extern "system" fn librustzcash_nsk_to_nk(
     nsk: *const [c_uchar; 32],
@@ -1220,7 +1221,7 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
     fs::write("party2_alpha", party2_randomize_json).expect("Unable to save !");
 }
 
-
+/*
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_sig(
     ask: *const [c_uchar; 32],
@@ -1358,7 +1359,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 }
 
 
-/*
+*/
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_sig(
     ask: *const [c_uchar; 32],
@@ -1408,7 +1409,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     true
 }
 
-*/
+
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_binding_sig(
     ctx: *const SaplingProvingContext,
