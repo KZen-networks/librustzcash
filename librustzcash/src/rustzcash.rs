@@ -1247,7 +1247,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
     let public_key = party1_ak;
 
-
+    println!("TEST1");
 
     let party1_vk = compute_vk(&public_key, &party1_alpha);
     let party2_vk = compute_vk(&public_key, &party2_alpha);
@@ -1258,8 +1258,9 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     let mut data_to_be_signed = [0u8; 64];
     party1_vk.get_element().write(&mut data_to_be_signed[0..32])
         .expect("message buffer should be 32 bytes");
+    println!("TEST2");
     (&mut data_to_be_signed[32..64]).copy_from_slice(&(unsafe { &*sighash })[..]);
-
+    println!("TEST3");
     let message = BigInt::from(&data_to_be_signed[..]);
 
     // round 3
@@ -1339,12 +1340,15 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
     rbar.clone_from_slice(&r_bytes[..]);
     sbar.clone_from_slice(&s_bytes[..]);
+    println!("TEST4");
 
     let sig_new = Signature{
         rbar,
         sbar,
     };
-   // let sig1 = [&r_bytes[..], &s_bytes[..]].concat();
+    println!("TEST5");
+
+    // let sig1 = [&r_bytes[..], &s_bytes[..]].concat();
     // Write out the signature
     sig_new.write(&mut (unsafe { &mut *result })[..])
         .expect("result should be 64 bytes");
