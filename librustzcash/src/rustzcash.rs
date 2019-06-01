@@ -382,7 +382,7 @@ use paradise_city::curv::elliptic::curves::curve_jubjub::GE;
 use paradise_city::curv::arithmetic::big_gmp::BigInt;
 use paradise_city::curv::arithmetic::traits::Converter;
 
-/*
+
 #[no_mangle]
 pub extern "system" fn librustzcash_ask_to_ak(
     ask: *const [c_uchar; 32],
@@ -465,21 +465,21 @@ pub extern "system" fn librustzcash_ask_to_ak(
 
 }
 
-*/
+/*
 #[no_mangle]
 pub extern "system" fn librustzcash_ask_to_ak(
     ask: *const [c_uchar; 32],
     result: *mut [c_uchar; 32],
 ) {
     let ask = unsafe { &*ask };
-    
+
     let ak = fixed_scalar_mult(ask, FixedGenerators::SpendingKeyGenerator);
 
     let result = unsafe { &mut *result };
 
     ak.write(&mut result[..]).expect("length is 32 bytes");
 }
-
+*/
 
 #[no_mangle]
 pub extern "system" fn librustzcash_nsk_to_nk(
@@ -1379,6 +1379,24 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
         Err(_) => return false,
     };
 
+    /////
+
+    let data = fs::read_to_string("keys1zcash")
+        .expect("Unable to load keys, did you run keygen first? ");
+    let (party1_ak, party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+
+    let data = fs::read_to_string("keys2")
+        .expect("Unable to load keys, did you run keygen first? ");
+    let (party2_ak, party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+
+    let ask_fe = party1_keys.ask + party2_keys.ask;
+    let ask_bn = ask_fe.to_big_int();
+    let ask_bytes = BigInt::to_vec(&ask_bn);
+    let ask = match redjubjub::PrivateKey::<Bls12>::read(&ask_bytes[..]) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+    /////
     // We compute `rsk`...
     let rsk = ask.randomize(ar);
 
