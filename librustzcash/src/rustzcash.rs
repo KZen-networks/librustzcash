@@ -1194,11 +1194,11 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
     let result = unsafe { &mut *result };
 
     let party1_alpha_bn = party1_alpha.to_big_int();
-    let zero_array = [0u8; 32];
-    let mut zero_vec = zero_array.to_vec();
+   // let zero_array = [0u8; 32];
+  //  let mut zero_vec = zero_array.to_vec();
     let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-    party1_alpha_bytes.extend_from_slice(&zero_vec[..]);
-    party1_alpha_bytes.reverse();
+  //  party1_alpha_bytes.extend_from_slice(&zero_vec[..]);
+  //  party1_alpha_bytes.reverse();
     let r = <Bls12 as JubjubEngine>::Fs::to_uniform(&party1_alpha_bytes[..]);
     println!("r: {:?}", r.clone());
     let result = unsafe { &mut *result };
@@ -1219,6 +1219,7 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
     fs::write("party1_alpha", party1_randomize_json).expect("Unable to save !");
     fs::write("party2_alpha", party2_randomize_json).expect("Unable to save !");
 }
+
 
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_sig(
@@ -1402,7 +1403,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
     true
 }
-*/
+
 
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_binding_sig(
@@ -1423,6 +1424,8 @@ pub extern "system" fn librustzcash_sapling_binding_sig(
 
     true
 }
+
+*/
 /*
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_proof(
@@ -1544,24 +1547,15 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     zkproof: *mut [c_uchar; GROTH_PROOF_SIZE],
 ) -> bool {
 
+    /*
     let data = fs::read_to_string("keys1zcash")
         .expect("Unable to load keys, did you run keygen first? ");
     let (party1_ak, party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
 
     let ak = party1_ak.get_element();
-    let mut vec = Vec::new();
-    ak.write(&mut vec).unwrap();
-    let ak = match edwards::Point::<Bls12, Unknown>::read(&vec[..], &JUBJUB) {
-        Ok(p) => p,
-        Err(_) => return false,
-    };
+    let ak = ak.as_prime_order(&JUBJUB).unwrap();
 
-    let ak = match ak.as_prime_order(&JUBJUB) {
-        Some(p) => p,
-        None => return false,
-    };
-
-    /*
+    */
     // Grab `ak` from the caller, which should be a point.
     let ak = match edwards::Point::<Bls12, Unknown>::read(&(unsafe { &*ak })[..], &JUBJUB) {
         Ok(p) => p,
@@ -1573,7 +1567,7 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
         Some(p) => p,
         None => return false,
     };
-    */
+
     // Grab `nsk` from the caller
     let nsk = match Fs::from_repr(read_fs(&(unsafe { &*nsk })[..])) {
         Ok(p) => p,

@@ -571,6 +571,9 @@ impl ToUniform for Fs {
     /// is responsible for ensuring the input is 64 bytes of
     /// Random Oracle output.
     fn to_uniform(digest: &[u8]) -> Self {
+        let mut template = vec![0u8; 64 - digest.len()];
+        template.extend_from_slice(digest);
+        let digest = &template[..];
         assert_eq!(digest.len(), 64);
         let mut repr: [u64; 8] = [0; 8];
         LittleEndian::read_u64_into(digest, &mut repr);
