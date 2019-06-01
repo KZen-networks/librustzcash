@@ -1404,7 +1404,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     true
 }
 
-
+*/
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_binding_sig(
     ctx: *const SaplingProvingContext,
@@ -1425,7 +1425,7 @@ pub extern "system" fn librustzcash_sapling_binding_sig(
     true
 }
 
-*/
+
 /*
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_proof(
