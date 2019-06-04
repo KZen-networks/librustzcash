@@ -397,7 +397,9 @@ pub extern "system" fn librustzcash_ask_to_ak(
                let (ak_party1, party1_keys):
                (GE, EcKeyPair)
                 = serde_json::from_str(&x).unwrap();
-               (ak_party1, party1_keys)
+               let eight : FE = ECScalar::from(&BigInt::from(8));
+               let eight_inv = eight.invert();
+               (ak_party1 * eight_inv, party1_keys)
            },
             Err(_) =>{
                 let (_, _, ec_key_pair) =
@@ -1235,11 +1237,11 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     println!("Start Sign");
     let data = fs::read_to_string("keys1zcash")
         .expect("Unable to load keys, did you run keygen first? ");
-    let (party1_ak, party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+    let (party1_ak, mut party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
 
     let data = fs::read_to_string("keys2")
         .expect("Unable to load keys, did you run keygen first? ");
-    let (party2_ak, party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+    let (party2_ak, mut party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
 
     let data = fs::read_to_string("party1_alpha")
         .expect("Unable to load alpha ");
@@ -1249,7 +1251,11 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
         .expect("Unable to load alpha ");
     let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
 
-    let public_key = party1_ak;
+    let eight : FE = ECScalar::from(&BigInt::from(8));
+    let eight_inv = eight.invert();
+    let public_key = party1_ak * eight_inv.clone();
+    party1_keys.ak = party1_keys.ak.clone() * eight_inv.clone();
+    party2_keys.ak = party2_keys.ak.clone() * eight_inv.clone();
 
     println!("TEST1");
 
@@ -1315,11 +1321,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
         party2_eph_keys,
         &message,
     );
-    println!("party1_R {:?}", party1_R.clone());
-    println!("party1_vk {:?}", party1_vk.clone());
-    println!("party1_local_sig {:?}", party1_local_sig.clone());
-    println!("party2_local_sig {:?}", party2_local_sig.clone());
-    println!("message {:?}", message.clone());
+
 
     // party1
     let party1_sig = Party1LocalSignatureMsg::compute(
