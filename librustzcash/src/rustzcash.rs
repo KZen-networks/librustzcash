@@ -1205,7 +1205,10 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
  //   r.into_repr()
  //       .write_le(&mut result[..])
  //       .expect("result must be 32 bytes");
-
+   // result = unsafe{ std::mem::transmute::<&[u8], &mut [u8;32]>(&party1_alpha_bytes[..])};
+    for i in 0..32 {
+        result[i] = party1_alpha_bytes[i];
+    }
     println!("result {:?}", result.clone());
 
     let party1_randomize_json = serde_json::to_string(&(
