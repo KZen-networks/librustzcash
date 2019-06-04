@@ -1315,6 +1315,11 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
         party2_eph_keys,
         &message,
     );
+    println!("party1_R {:?}", party1_R.clone());
+    println!("party1_vk {:?}", party1_vk.clone());
+    println!("party1_local_sig {:?}", party1_local_sig.clone());
+    println!("party2_local_sig {:?}", party2_local_sig.clone());
+    println!("message {:?}", message.clone());
 
     // party1
     let party1_sig = Party1LocalSignatureMsg::compute(
