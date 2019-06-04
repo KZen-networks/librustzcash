@@ -1191,21 +1191,21 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
         &party1_cf_first_message,
     );
 
-    let result = unsafe { &mut *result };
-
     let party1_alpha_bn = party1_alpha.to_big_int();
    // let zero_array = [0u8; 32];
   //  let mut zero_vec = zero_array.to_vec();
     let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-  //  party1_alpha_bytes.extend_from_slice(&zero_vec[..]);
-  //  party1_alpha_bytes.reverse();
-    let r = <Bls12 as JubjubEngine>::Fs::to_uniform(&party1_alpha_bytes[..]);
-    println!("r: {:?}", r.clone());
+    party1_alpha_bytes.reverse();
     let result = unsafe { &mut *result };
-    r.into_repr()
-        .write_le(&mut result[..])
-        .expect("result must be 32 bytes");
-    println!("result {:?}", result.clone());
+    result.write(&party1_alpha_bytes);
+ //   let r = <Bls12 as JubjubEngine>::Fs::to_uniform(&party1_alpha_bytes[..]);
+  //  println!("r: {:?}", r.clone());
+ //   let result = unsafe { &mut *result };
+ //   r.into_repr()
+ //       .write_le(&mut result[..])
+ //       .expect("result must be 32 bytes");
+
+  //  println!("result {:?}", result.clone());
 
     let party1_randomize_json = serde_json::to_string(&(
         party1_alpha
@@ -1220,7 +1220,7 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
     fs::write("party2_alpha", party2_randomize_json).expect("Unable to save !");
 }
 
-/*
+
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_sig(
     ask: *const [c_uchar; 32],
@@ -1358,7 +1358,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 }
 
 
-*/
+/*
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_sig(
     ask: *const [c_uchar; 32],
@@ -1425,7 +1425,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
     true
 }
-
+*/
 
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_binding_sig(
@@ -1552,6 +1552,7 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
 
 use sapling_crypto::jubjub::JubjubBls12 as jjbls12_l;
 use paradise_city::curv::elliptic::curves::curve_jubjub::FE;
+use std::io::Write;
 
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_proof(
