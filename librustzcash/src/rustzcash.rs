@@ -1196,8 +1196,9 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
   //  let mut zero_vec = zero_array.to_vec();
     let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
     party1_alpha_bytes.reverse();
-    let result = unsafe { &mut *result };
-    result.write(&party1_alpha_bytes);
+    let result = unsafe { &mut *result};
+
+    (&result[..]).to_vec().write(&party1_alpha_bytes);
  //   let r = <Bls12 as JubjubEngine>::Fs::to_uniform(&party1_alpha_bytes[..]);
   //  println!("r: {:?}", r.clone());
  //   let result = unsafe { &mut *result };
@@ -1205,7 +1206,7 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
  //       .write_le(&mut result[..])
  //       .expect("result must be 32 bytes");
 
-  //  println!("result {:?}", result.clone());
+    println!("result {:?}", result.clone());
 
     let party1_randomize_json = serde_json::to_string(&(
         party1_alpha
