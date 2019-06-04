@@ -440,8 +440,12 @@ pub extern "system" fn librustzcash_ask_to_ak(
         assert_eq!(party1_ak, party2_ak);
 
 
-        let ak = party1_ak.get_element();
+        let mut ak = party1_ak.pk_to_key_slice();
+        ak.reverse();
         let result = unsafe { &mut *result };
+        for i in (0..32){
+            result[i] = ak[i];
+        }
 
         ak.write(&mut result[..]).expect("length is 32 bytes");
         let party1_keygen_json = serde_json::to_string(&(
@@ -459,10 +463,14 @@ pub extern "system" fn librustzcash_ask_to_ak(
         fs::write("keys2", party2_keygen_json).expect("Unable to save !");
     }
     else{
-        let ak = maybe_ak.get_element();
-        let result = unsafe { &mut *result };
 
-        ak.write(&mut result[..]).expect("length is 32 bytes");
+
+        let mut ak = maybe_ak.pk_to_key_slice();
+        ak.reverse();
+        let result = unsafe { &mut *result };
+        for i in (0..32){
+            result[i] = ak[i];
+        }
     }
 
 }
@@ -1200,14 +1208,6 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
     party1_alpha_bytes.reverse();
     let result = unsafe { &mut *result};
 
-  //  (&result[..]).to_vec().write(&party1_alpha_bytes);
- //   let r = <Bls12 as JubjubEngine>::Fs::to_uniform(&party1_alpha_bytes[..]);
-  //  println!("r: {:?}", r.clone());
- //   let result = unsafe { &mut *result };
- //   r.into_repr()
- //       .write_le(&mut result[..])
- //       .expect("result must be 32 bytes");
-   // result = unsafe{ std::mem::transmute::<&[u8], &mut [u8;32]>(&party1_alpha_bytes[..])};
     for i in 0..32 {
         result[i] = party1_alpha_bytes[i];
     }
@@ -1344,8 +1344,12 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
 
     // serialize sig:
-    let mut r_bytes = &party1_sig.R.pk_to_key_slice()[0..32];
-    let mut s_bytes = &BigInt::to_vec(&(party1_sig.s.to_big_int()))[0..32];
+    let mut r_bytes = party1_sig.R.pk_to_key_slice();
+    r_bytes.reverse();
+    let r_bytes = &r_bytes[..];
+    let mut s_bytes = BigInt::to_vec(&(party1_sig.s.to_big_int()));
+    s_bytes.reverse();
+    let s_bytes = &s_bytes[..];
     let mut rbar = [0u8;32];
     let mut sbar = [0u8;32];
 
