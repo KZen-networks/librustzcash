@@ -438,8 +438,13 @@ pub extern "system" fn librustzcash_ask_to_ak(
         );
 
         assert_eq!(party1_ak, party2_ak);
+//
+        let ak = party1_ak.get_element();
+        let result = unsafe { &mut *result };
 
-
+        ak.write(&mut result[..]).expect("length is 32 bytes");
+//
+//
         let mut ak = party1_ak.pk_to_key_slice();
       //  ak.reverse();
         let result = unsafe { &mut *result };
@@ -1205,7 +1210,7 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
    // let zero_array = [0u8; 32];
   //  let mut zero_vec = zero_array.to_vec();
     let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-  //  party1_alpha_bytes.reverse();
+    party1_alpha_bytes.reverse();
     let result = unsafe { &mut *result};
 
     for i in 0..32 {
@@ -1349,7 +1354,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
  //   r_bytes.reverse();
     let r_bytes = &r_bytes[..];
     let mut s_bytes = BigInt::to_vec(&(party1_sig.s.to_big_int()));
-//    s_bytes.reverse();
+    s_bytes.reverse();
     let s_bytes = &s_bytes[..];
     let mut rbar = [0u8;32];
     let mut sbar = [0u8;32];
