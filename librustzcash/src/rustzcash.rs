@@ -439,12 +439,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
 
         assert_eq!(party1_ak, party2_ak);
 //
-        let ak = party1_ak.get_element();
-        let result = unsafe { &mut *result };
 
-        ak.write(&mut result[..]).expect("length is 32 bytes");
-//
-//
         let mut ak = party1_ak.pk_to_key_slice();
       //  ak.reverse();
         let result = unsafe { &mut *result };
