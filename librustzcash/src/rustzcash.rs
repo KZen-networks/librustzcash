@@ -441,7 +441,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
 
 
         let mut ak = party1_ak.pk_to_key_slice();
-        ak.reverse();
+      //  ak.reverse();
         let result = unsafe { &mut *result };
         for i in (0..32){
             result[i] = ak[i];
@@ -466,7 +466,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
 
 
         let mut ak = maybe_ak.pk_to_key_slice();
-        ak.reverse();
+    //    ak.reverse();
         let result = unsafe { &mut *result };
         for i in (0..32){
             result[i] = ak[i];
@@ -1205,7 +1205,7 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
    // let zero_array = [0u8; 32];
   //  let mut zero_vec = zero_array.to_vec();
     let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-    party1_alpha_bytes.reverse();
+  //  party1_alpha_bytes.reverse();
     let result = unsafe { &mut *result};
 
     for i in 0..32 {
@@ -1273,6 +1273,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     println!("TEST3");
     let message = BigInt::from(&data_to_be_signed[..]);
 
+    println!("data to be signed : {:?}",  data_to_be_signed.to_vec().clone());
     // round 3
     // party1:
     let (party1_eph_first_message, party1_comm_witness, party1_eph_keys) =
@@ -1345,10 +1346,10 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
     // serialize sig:
     let mut r_bytes = party1_sig.R.pk_to_key_slice();
-    r_bytes.reverse();
+ //   r_bytes.reverse();
     let r_bytes = &r_bytes[..];
     let mut s_bytes = BigInt::to_vec(&(party1_sig.s.to_big_int()));
-    s_bytes.reverse();
+//    s_bytes.reverse();
     let s_bytes = &s_bytes[..];
     let mut rbar = [0u8;32];
     let mut sbar = [0u8;32];
