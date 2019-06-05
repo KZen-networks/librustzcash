@@ -1207,7 +1207,8 @@ pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar
    // let zero_array = [0u8; 32];
   //  let mut zero_vec = zero_array.to_vec();
     let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-    party1_alpha_bytes.reverse();
+   // party1_alpha_bytes.reverse();
+    println!("alpha gen: {:?}", party1_alpha_bytes.to_vec().clone());
     let result = unsafe { &mut *result};
 
     for i in 0..32 {
@@ -1358,7 +1359,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
  //   r_bytes.reverse();
     let r_bytes = &r_bytes[..];
     let mut s_bytes = BigInt::to_vec(&(party1_sig.s.to_big_int()));
-    s_bytes.reverse();
+    //s_bytes.reverse();
     let s_bytes = &s_bytes[..];
     let mut rbar = [0u8;32];
     let mut sbar = [0u8;32];
