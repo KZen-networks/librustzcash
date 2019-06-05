@@ -1258,6 +1258,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
 
     println!("party1_alpha: {:?}", party1_alpha.clone());
+    println!("party1_ak {:?}", party1_ak.pk_to_key_slice().clone());
 
     let eight : FE = ECScalar::from(&BigInt::from(8));
     let eight_inv = eight.invert();
@@ -1371,6 +1372,9 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
         sbar,
     };
     println!("TEST5");
+
+    println!("r_bytes {:?}", r_bytes.clone());
+    println!("s_bytes {:?}", s_bytes.clone());
 
     // let sig1 = [&r_bytes[..], &s_bytes[..]].concat();
     // Write out the signature

@@ -157,7 +157,10 @@ impl SaplingProvingContext {
             None => return Err(()),
         };
 
-        println!("alpha inside proof: {:?}", ar.clone());
+        let mut data_to_be_signed = [0u8; 32];
+        ar.clone().into_repr().write_le(&mut data_to_be_signed[0..32]);
+        println!("alpha inside proof: {:?}", data_to_be_signed);
+
         let mut data_to_be_signed = [0u8; 32];
         proof_generation_key.ak.clone().write(&mut data_to_be_signed[0..32])
             .expect("message buffer should be 32 bytes");

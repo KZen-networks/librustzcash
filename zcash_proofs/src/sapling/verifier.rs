@@ -76,6 +76,9 @@ impl SaplingVerificationContext {
             FixedGenerators::SpendingKeyGenerator,
             params,
         ) {
+            println!("data_to_be_signed {:?}", data_to_be_signed.clone());
+            println!("spend_auth_sig {:?}", spend_auth_sig.clone());
+
             return false;
         }
 
