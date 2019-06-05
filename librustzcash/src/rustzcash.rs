@@ -388,6 +388,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
     ask: *const [c_uchar; 32],
     result: *mut [c_uchar; 32],
 ) {
+    println!("librustzcash_ask_to_ak checkpoint");
 
     // if keygen was called before use the result:
     let data = fs::read_to_string("keys1zcash");
@@ -1160,7 +1161,7 @@ pub extern "system" fn librustzcash_sapling_output_proof(
     true
 }
 
-/*
+
 /// Return 32 byte random scalar, uniformly.
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32]) {
@@ -1178,11 +1179,12 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
         .write_le(&mut result[..])
         .expect("result must be 32 bytes");
 }
-*/
+
 
 /// Return 32 byte random scalar, uniformly.
 #[no_mangle]
-pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32]) {
+pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar; 32]) {
+    println!("librustzcash_sapling_generate_alpha checkpoint");
     // round 1
     // party1
     let (party1_cf_first_message, party1_cf_seed, party1_cf_blinding) =
