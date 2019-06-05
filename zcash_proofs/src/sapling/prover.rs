@@ -157,6 +157,12 @@ impl SaplingProvingContext {
             None => return Err(()),
         };
 
+        println!("alpha inside proof: {:?}", ar.clone());
+        let mut data_to_be_signed = [0u8; 32];
+        proof_generation_key.ak.clone().write(&mut data_to_be_signed[0..32])
+            .expect("message buffer should be 32 bytes");
+        println!("ak inside proof: {:?}", data_to_be_signed);
+
         // This is the result of the re-randomization, we compute it for the caller
         let rk = PublicKey::<Bls12>(proof_generation_key.ak.clone().into()).randomize(
             ar,

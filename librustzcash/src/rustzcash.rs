@@ -1234,6 +1234,10 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     sighash: *const [c_uchar; 32],
     result: *mut [c_uchar; 64],
 ) -> bool {
+
+    println!("ask: {:?}", ask.clone());
+    println!("ar: {:?}", ar.clone());
+
     println!("Start Sign");
     let data = fs::read_to_string("keys1zcash")
         .expect("Unable to load keys, did you run keygen first? ");
@@ -1250,6 +1254,8 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     let data = fs::read_to_string("party2_alpha")
         .expect("Unable to load alpha ");
     let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
+
+    println!("party1_alpha: {:?}", party1_alpha.clone());
 
     let eight : FE = ECScalar::from(&BigInt::from(8));
     let eight_inv = eight.invert();
