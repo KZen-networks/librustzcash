@@ -233,6 +233,10 @@ extern "C" {
         unsigned char *result
     );
 
+    void librustzcash_sapling_generate_alpha(
+        unsigned char *result
+    );
+
     /// Sprout JoinSplit proof generation.
     void librustzcash_sprout_prove(
         unsigned char *proof_out,
