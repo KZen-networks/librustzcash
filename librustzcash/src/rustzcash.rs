@@ -1235,8 +1235,8 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     result: *mut [c_uchar; 64],
 ) -> bool {
 
-    println!("ask: {:?}", ask.clone());
-    println!("ar: {:?}", ar.clone());
+    println!("ask: {:?}", unsafe{*ask.clone()});
+    println!("ar: {:?}", unsafe{*ar.clone()});
 
     println!("Start Sign");
     let data = fs::read_to_string("keys1zcash")
