@@ -1269,8 +1269,13 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
     println!("TEST1");
 
+    let party1_alpha_bn = party1_alpha.to_big_int();
+    let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
+    party1_alpha_bytes.reverse();
+    let party1_alpha : FE = ECScalar::from(&BigInt::from(&party1_alpha_bytes[..]));
+
     let party1_vk = compute_vk(&public_key, &party1_alpha);
-    let party2_vk = compute_vk(&public_key, &party2_alpha);
+    let party2_vk = compute_vk(&public_key, &party1_alpha);
 
     assert_eq!(party1_vk, party2_vk);
 
@@ -1599,17 +1604,45 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     zkproof: *mut [c_uchar; GROTH_PROOF_SIZE],
 ) -> bool {
 
-    /*
+
+
+    println!("ak: {:?}", unsafe{*ak.clone()});
+    println!("ar: {:?}", unsafe{*ar.clone()});
+
+    println!("Start Sign");
     let data = fs::read_to_string("keys1zcash")
         .expect("Unable to load keys, did you run keygen first? ");
-    let (party1_ak, party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+    let (party1_ak, mut party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
 
-    let ak = party1_ak.get_element();
-    let ak = ak.as_prime_order(&JUBJUB).unwrap();
+    let data = fs::read_to_string("keys2")
+        .expect("Unable to load keys, did you run keygen first? ");
+    let (party2_ak, mut party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
 
-    */
+    let data = fs::read_to_string("party1_alpha")
+        .expect("Unable to load alpha ");
+    let (party1_alpha): (FE)  = serde_json::from_str(&data).unwrap();
+
+    let data = fs::read_to_string("party2_alpha")
+        .expect("Unable to load alpha ");
+    let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
+
+    println!("party1_alpha: {:?}", party1_alpha.clone());
+    println!("party1_ak {:?}", party1_ak.pk_to_key_slice().clone());
+
+    let eight : FE = ECScalar::from(&BigInt::from(8));
+    let eight_inv = eight.invert();
+    let public_key = party1_ak * eight_inv.clone();
+
+
+    println!("TEST Proof 1");
+
+    let party1_alpha_bn = party1_alpha.to_big_int();
+    let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
+    party1_alpha_bytes.reverse();
+    let party1_alpha : FE = ECScalar::from(&BigInt::from(&party1_alpha_bytes[..]));
+
     // Grab `ak` from the caller, which should be a point.
-    let ak = match edwards::Point::<Bls12, Unknown>::read(&(unsafe { &*ak })[..], &JUBJUB) {
+    let ak = match edwards::Point::<Bls12, Unknown>::read(&(public_key.pk_to_key_slice())[..], &JUBJUB) {
         Ok(p) => p,
         Err(_) => return false,
     };
@@ -1642,7 +1675,7 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     };
 
     // The caller also chooses the re-randomization of ak
-    let ar = match Fs::from_repr(read_fs(&(unsafe { &*ar })[..])) {
+    let ar = match Fs::from_repr(read_fs(&party1_alpha_bytes[..])) {
         Ok(p) => p,
         Err(_) => return false,
     };
