@@ -157,6 +157,7 @@ impl SaplingProvingContext {
             None => return Err(()),
         };
 
+
         let mut data_to_be_signed = [0u8; 32];
         ar.clone().into_repr().write_le(&mut data_to_be_signed[0..32]);
         println!("alpha inside proof: {:?}", data_to_be_signed);
@@ -173,12 +174,14 @@ impl SaplingProvingContext {
             params,
         );
         ///////
+        /*
         let JUBJUB: JubjubBls12 = { JubjubBls12::new() };
         let mut rk_bytes = [0u8; 32];
         let mut party1_vk_bytes = rk_bytes.to_vec();
         rk.write(&mut party1_vk_bytes);
         party1_vk_bytes.reverse();
         let rk = PublicKey::<Bls12>::read(&party1_vk_bytes[..], &JUBJUB).unwrap();
+        */
 //////////
 
         // Let's compute the nullifier while we have the position
