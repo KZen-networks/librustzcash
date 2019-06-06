@@ -472,7 +472,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
         for i in (0..32){
             result[i] = ak[i];
         }
-
+/*
         let data = fs::read_to_string("keys2")
             .expect("Unable to load keys, did you run keygen first? ");
         let (party2_ak, mut party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
@@ -494,7 +494,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
             .unwrap();
         fs::write("keys1zcash", party1_keygen_json).expect("Unable to save !");
         fs::write("keys2", party2_keygen_json).expect("Unable to save !");
-
+*/
     }
 
 }
