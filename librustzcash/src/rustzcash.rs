@@ -440,15 +440,17 @@ pub extern "system" fn librustzcash_ask_to_ak(
 
         assert_eq!(party1_ak, party2_ak);
 //
-
+        let result = unsafe { &mut *result };
+        party1_ak.get_element().write(&mut result[..]).expect("length is 32 bytes");
+        /*
         let mut ak = party1_ak.pk_to_key_slice();
       //  ak.reverse();
         let result = unsafe { &mut *result };
         for i in (0..32){
             result[i] = ak[i];
         }
-
         ak.write(&mut result[..]).expect("length is 32 bytes");
+        */
         let party1_keygen_json = serde_json::to_string(&(
             party1_ak,
             party1_keys,
@@ -462,39 +464,46 @@ pub extern "system" fn librustzcash_ask_to_ak(
             .unwrap();
         fs::write("keys1zcash", party1_keygen_json).expect("Unable to save !");
         fs::write("keys2", party2_keygen_json).expect("Unable to save !");
+
+        println!("ak result if {:?}", result.clone());
     }
     else{
 
-
+        let result = unsafe { &mut *result };
+        maybe_ak.get_element().write(&mut result[..]).expect("length is 32 bytes");
+        /*
         let mut ak = maybe_ak.pk_to_key_slice();
     //    ak.reverse();
         let result = unsafe { &mut *result };
         for i in (0..32){
             result[i] = ak[i];
         }
-/*
-        let data = fs::read_to_string("keys2")
-            .expect("Unable to load keys, did you run keygen first? ");
-        let (party2_ak, mut party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+        */
+        println!("ak result else {:?}", result.clone());
 
-        let eight : FE = ECScalar::from(&BigInt::from(8));
-        let eight_inv = eight.invert();
-        party2_keys.ak = party2_keys.ak.clone() * eight_inv.clone();
+        /*
+                let data = fs::read_to_string("keys2")
+                    .expect("Unable to load keys, did you run keygen first? ");
+                let (party2_ak, mut party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
 
-        let party1_keygen_json = serde_json::to_string(&(
-            ak.clone(),
-            party1_keys,
-        ))
-            .unwrap();
+                let eight : FE = ECScalar::from(&BigInt::from(8));
+                let eight_inv = eight.invert();
+                party2_keys.ak = party2_keys.ak.clone() * eight_inv.clone();
 
-        let party2_keygen_json = serde_json::to_string(&(
-            ak,
-            party2_keys,
-        ))
-            .unwrap();
-        fs::write("keys1zcash", party1_keygen_json).expect("Unable to save !");
-        fs::write("keys2", party2_keygen_json).expect("Unable to save !");
-*/
+                let party1_keygen_json = serde_json::to_string(&(
+                    ak.clone(),
+                    party1_keys,
+                ))
+                    .unwrap();
+
+                let party2_keygen_json = serde_json::to_string(&(
+                    ak,
+                    party2_keys,
+                ))
+                    .unwrap();
+                fs::write("keys1zcash", party1_keygen_json).expect("Unable to save !");
+                fs::write("keys2", party2_keygen_json).expect("Unable to save !");
+        */
     }
 
 }
@@ -1282,11 +1291,12 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
 
     println!("party1_alpha: {:?}", party1_alpha.clone());
-    println!("party1_ak {:?}", party1_ak.pk_to_key_slice().clone());
 
     let eight : FE = ECScalar::from(&BigInt::from(8));
     let eight_inv = eight.invert();
     let public_key = party1_ak * eight_inv.clone();
+    println!("party1_ak {:?}", public_key.pk_to_key_slice().clone());
+
     party1_keys.ak = party1_keys.ak.clone() * eight_inv.clone();
     party2_keys.ak = party2_keys.ak.clone() * eight_inv.clone();
 
@@ -1650,11 +1660,12 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
 
     println!("party1_alpha: {:?}", party1_alpha.clone());
-    println!("party1_ak {:?}", party1_ak.pk_to_key_slice().clone());
 
     let eight : FE = ECScalar::from(&BigInt::from(8));
     let eight_inv = eight.invert();
     let public_key = party1_ak * eight_inv.clone();
+    println!("party1_ak {:?}", public_key.pk_to_key_slice().clone());
+
     let mut public_key_vec = public_key.pk_to_key_slice();
     public_key_vec.reverse();
     println!("TEST Proof 1");
