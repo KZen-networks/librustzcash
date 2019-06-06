@@ -1515,7 +1515,7 @@ pub extern "system" fn librustzcash_sapling_binding_sig(
 }
 
 
-/*
+
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_proof(
     ctx: *mut SaplingProvingContext,
@@ -1615,12 +1615,13 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
 
     true
 }
-*/
+
 
 use sapling_crypto::jubjub::JubjubBls12 as jjbls12_l;
 use paradise_city::curv::elliptic::curves::curve_jubjub::FE;
 use std::io::Write;
 
+/*
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_proof(
     ctx: *mut SaplingProvingContext,
@@ -1759,7 +1760,7 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
 
     true
 }
-
+*/
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_proving_ctx_init() -> *mut SaplingProvingContext {
     let ctx = Box::new(SaplingProvingContext::new());
