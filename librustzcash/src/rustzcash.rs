@@ -440,9 +440,9 @@ pub extern "system" fn librustzcash_ask_to_ak(
 
         assert_eq!(party1_ak, party2_ak);
 //
-        let result = unsafe { &mut *result };
-        party1_ak.get_element().write(&mut result[..]).expect("length is 32 bytes");
-        /*
+      //  let result = unsafe { &mut *result };
+     //   party1_ak.get_element().write(&mut result[..]).expect("length is 32 bytes");
+
         let mut ak = party1_ak.pk_to_key_slice();
       //  ak.reverse();
         let result = unsafe { &mut *result };
@@ -450,7 +450,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
             result[i] = ak[i];
         }
         ak.write(&mut result[..]).expect("length is 32 bytes");
-        */
+
         let party1_keygen_json = serde_json::to_string(&(
             party1_ak,
             party1_keys,
@@ -469,16 +469,16 @@ pub extern "system" fn librustzcash_ask_to_ak(
     }
     else{
 
-        let result = unsafe { &mut *result };
-        maybe_ak.get_element().write(&mut result[..]).expect("length is 32 bytes");
-        /*
+      //  let result = unsafe { &mut *result };
+     //   maybe_ak.get_element().write(&mut result[..]).expect("length is 32 bytes");
+
         let mut ak = maybe_ak.pk_to_key_slice();
-    //    ak.reverse();
+     //   ak.reverse();
         let result = unsafe { &mut *result };
         for i in (0..32){
             result[i] = ak[i];
         }
-        */
+
         println!("ak result else {:?}", result.clone());
 
         /*
@@ -1239,7 +1239,7 @@ pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar
    // let zero_array = [0u8; 32];
   //  let mut zero_vec = zero_array.to_vec();
     let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-   // party1_alpha_bytes.reverse();
+    party1_alpha_bytes.reverse();
     println!("alpha gen: {:?}", party1_alpha_bytes.to_vec().clone());
     let result = unsafe { &mut *result};
 
@@ -1314,8 +1314,12 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
     // Compute the signature's message for rk/spend_auth_sig
     let mut data_to_be_signed = [0u8; 64];
-    party1_vk.get_element().write(&mut data_to_be_signed[0..32])
-        .expect("message buffer should be 32 bytes");
+    let party1_vk_bytes = party1_vk.pk_to_key_slice();
+    for i in 0..32{
+        data_to_be_signed[i] = party1_vk_bytes[i];
+    }
+    //party1_vk.get_element().write(&mut data_to_be_signed[0..32])
+    //    .expect("message buffer should be 32 bytes");
     println!("TEST2");
     (&mut data_to_be_signed[32..64]).copy_from_slice(&(unsafe { &*sighash })[..]);
     println!("TEST3");
@@ -1397,7 +1401,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
  //   r_bytes.reverse();
     let r_bytes = &r_bytes[..];
     let mut s_bytes = BigInt::to_vec(&(party1_sig.s.to_big_int()));
-    //s_bytes.reverse();
+    s_bytes.reverse();
     let s_bytes = &s_bytes[..];
     let mut rbar = [0u8;32];
     let mut sbar = [0u8;32];
@@ -1534,13 +1538,13 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     // Grab `ak` from the caller, which should be a point.
     let ak = match edwards::Point::<Bls12, Unknown>::read(&(unsafe { &*ak })[..], &JUBJUB) {
         Ok(p) => p,
-        Err(_) => return false,
+        Err(_) => {println!("fail 1 "); return false},
     };
 
     // `ak` should be prime order.
     let ak = match ak.as_prime_order(&JUBJUB) {
         Some(p) => p,
-        None => return false,
+        None => {println!("fail 2 "); return false},
     };
 
     // Grab `nsk` from the caller
@@ -1567,7 +1571,7 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     // The caller also chooses the re-randomization of ak
     let ar = match Fs::from_repr(read_fs(&(unsafe { &*ar })[..])) {
         Ok(p) => p,
-        Err(_) => return false,
+        Err(_) =>{println!("fail 3 "); return false},
     };
 
     // We need to compute the anchor of the Spend.
