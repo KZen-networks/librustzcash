@@ -472,6 +472,29 @@ pub extern "system" fn librustzcash_ask_to_ak(
         for i in (0..32){
             result[i] = ak[i];
         }
+
+        let data = fs::read_to_string("keys2")
+            .expect("Unable to load keys, did you run keygen first? ");
+        let (party2_ak, mut party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+
+        let eight : FE = ECScalar::from(&BigInt::from(8));
+        let eight_inv = eight.invert();
+        party2_keys.ak = party2_keys.ak.clone() * eight_inv.clone();
+
+        let party1_keygen_json = serde_json::to_string(&(
+            ak.clone(),
+            party1_keys,
+        ))
+            .unwrap();
+
+        let party2_keygen_json = serde_json::to_string(&(
+            ak,
+            party2_keys,
+        ))
+            .unwrap();
+        fs::write("keys1zcash", party1_keygen_json).expect("Unable to save !");
+        fs::write("keys2", party2_keygen_json).expect("Unable to save !");
+
     }
 
 }
@@ -1609,7 +1632,7 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     println!("ak: {:?}", unsafe{*ak.clone()});
     println!("ar: {:?}", unsafe{*ar.clone()});
 
-    println!("Start Sign");
+    println!("Test Proof 0");
     let data = fs::read_to_string("keys1zcash")
         .expect("Unable to load keys, did you run keygen first? ");
     let (party1_ak, mut party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
@@ -1632,8 +1655,8 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     let eight : FE = ECScalar::from(&BigInt::from(8));
     let eight_inv = eight.invert();
     let public_key = party1_ak * eight_inv.clone();
-
-
+    let mut public_key_vec = public_key.pk_to_key_slice();
+    public_key_vec.reverse();
     println!("TEST Proof 1");
 
     let party1_alpha_bn = party1_alpha.to_big_int();
@@ -1642,7 +1665,7 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     let party1_alpha : FE = ECScalar::from(&BigInt::from(&party1_alpha_bytes[..]));
 
     // Grab `ak` from the caller, which should be a point.
-    let ak = match edwards::Point::<Bls12, Unknown>::read(&(public_key.pk_to_key_slice())[..], &JUBJUB) {
+    let ak = match edwards::Point::<Bls12, Unknown>::read(&public_key_vec[..], &JUBJUB) {
         Ok(p) => p,
         Err(_) => return false,
     };
