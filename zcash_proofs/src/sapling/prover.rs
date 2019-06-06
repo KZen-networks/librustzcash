@@ -8,6 +8,7 @@ use pairing::{
 };
 use rand::{OsRng, Rand};
 use sapling_crypto::{
+    jubjub::{JubjubEngine, fs::FsRepr},
     circuit::{
         multipack,
         sapling::{Output, Spend, TREE_DEPTH},
@@ -17,6 +18,14 @@ use sapling_crypto::{
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
 
+fn read_fs(from: &[u8]) -> FsRepr {
+    assert_eq!(from.len(), 32);
+
+    let mut f = <<Bls12 as JubjubEngine>::Fs as PrimeField>::Repr::default();
+    f.read_le(from).expect("length is 32 bytes");
+
+    f
+}
 use super::compute_value_balance;
 
 /// A witness to a path from a postion in a particular Sapling commitment tree
@@ -158,9 +167,11 @@ impl SaplingProvingContext {
         };
 
 
-        let mut data_to_be_signed = [0u8; 32];
-        ar.clone().into_repr().write_le(&mut data_to_be_signed[0..32]);
-        println!("alpha inside proof: {:?}", data_to_be_signed);
+        let mut ar_vec = [0u8; 32];
+        ar.clone().into_repr().write_le(&mut ar_vec[0..32]);
+        println!("alpha inside proof: {:?}", ar_vec);
+        ar_vec.reverse();
+        let ar =  Fs::from_repr(read_fs(&ar_vec[..])).unwrap();
 
         let mut data_to_be_signed = [0u8; 32];
         proof_generation_key.ak.clone().write(&mut data_to_be_signed[0..32])
@@ -263,6 +274,8 @@ impl SaplingProvingContext {
 
         Ok((proof, value_commitment, rk))
     }
+
+
 
     /// Create the value commitment and proof for a Sapling OutputDescription,
     /// while accumulating its value commitment randomness inside the context
