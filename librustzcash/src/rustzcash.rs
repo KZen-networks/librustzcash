@@ -1301,7 +1301,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
         .expect("Unable to load alpha ");
     let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
 
-    println!("party1_alpha: {:?}", party1_alpha.clone());
+    println!("party1_alpha: {:?}", party1_alpha.to_big_int().to_str_radix(16));
 
     let eight : FE = ECScalar::from(&BigInt::from(8));
     let eight_inv = eight.invert();
@@ -1311,15 +1311,18 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     party1_keys.ak = party1_keys.ak.clone() * eight_inv.clone();
     party2_keys.ak = party2_keys.ak.clone() * eight_inv.clone();
 
+
     println!("TEST1");
 
     let party1_alpha_bn = party1_alpha.to_big_int();
     let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-    party1_alpha_bytes.reverse();
+   // party1_alpha_bytes.reverse();
     let party1_alpha : FE = ECScalar::from(&BigInt::from(&party1_alpha_bytes[..]));
 
     let party1_vk = compute_vk(&public_key, &party1_alpha);
     let party2_vk = compute_vk(&public_key, &party1_alpha);
+
+    println!("party1_vk {:?}", party1_vk.pk_to_key_slice().clone());
 
     assert_eq!(party1_vk, party2_vk);
 
