@@ -170,8 +170,8 @@ impl SaplingProvingContext {
         let mut ar_vec = [0u8; 32];
         ar.clone().into_repr().write_le(&mut ar_vec[0..32]);
         println!("alpha inside proof: {:?}", ar_vec);
-        ar_vec.reverse();
-        let ar =  Fs::from_repr(read_fs(&ar_vec[..])).unwrap();
+     //   ar_vec.reverse();
+    //    let ar =  Fs::from_repr(read_fs(&ar_vec[..])).unwrap();
 
         let mut data_to_be_signed = [0u8; 32];
         proof_generation_key.ak.clone().write(&mut data_to_be_signed[0..32])
