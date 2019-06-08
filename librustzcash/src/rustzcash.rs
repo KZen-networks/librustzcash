@@ -1265,7 +1265,7 @@ pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar
     for i in 0..32 {
         alpha_final_vec[i] = result[i];
     }
-
+    alpha_final_vec.reverse();
     let party1_alpha :FE = ECScalar::from(&(BigInt::from(&alpha_final_vec[..])));
     let party2_alpha :FE = ECScalar::from(&(BigInt::from(&alpha_final_vec[..])));
 
