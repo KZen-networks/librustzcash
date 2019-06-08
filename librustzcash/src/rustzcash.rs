@@ -1276,7 +1276,7 @@ pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar
         .unwrap();
 
     let party2_randomize_json = serde_json::to_string(&
-        coin_flip_res.party2_alpha,
+                                                          party2_alpha,
     )
         .unwrap();
     fs::write("party1_alpha", party1_randomize_json).expect("Unable to save !");
