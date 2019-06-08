@@ -1425,6 +1425,8 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     let mut r_bytes = party1_sig.R.pk_to_key_slice();
  //   r_bytes.reverse();
     let r_bytes = &r_bytes[..];
+
+
     let mut s_bytes = BigInt::to_vec(&(party1_sig.s.to_big_int()));
     s_bytes.reverse();
     let s_bytes = &s_bytes[..];
