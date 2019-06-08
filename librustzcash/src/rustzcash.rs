@@ -1341,7 +1341,7 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     let mut data_to_be_signed = [0u8; 64];
     let party1_vk_bytes = party1_vk.pk_to_key_slice();
     for i in 0..32{
-        data_to_be_signed[i] = party1_vk_bytes[i];
+        data_to_be_signed[i] = party1_vk_bytes[31-i];
     }
     //party1_vk.get_element().write(&mut data_to_be_signed[0..32])
     //    .expect("message buffer should be 32 bytes");
