@@ -8,12 +8,12 @@ use pairing::{
 };
 use rand::{OsRng, Rand};
 use sapling_crypto::{
-    jubjub::{JubjubEngine, fs::FsRepr},
     circuit::{
         multipack,
         sapling::{Output, Spend, TREE_DEPTH},
     },
     jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown},
+    jubjub::{fs::FsRepr, JubjubEngine},
     primitives::{Diversifier, Note, PaymentAddress, ProofGenerationKey, ValueCommitment},
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
@@ -166,17 +166,15 @@ impl SaplingProvingContext {
             None => return Err(()),
         };
 
-
         let mut ar_vec = [0u8; 32];
         ar.clone().into_repr().write_le(&mut ar_vec[0..32]);
-        println!("alpha inside proof: {:?}", ar_vec);
-     //   ar_vec.reverse();
-    //    let ar =  Fs::from_repr(read_fs(&ar_vec[..])).unwrap();
 
         let mut data_to_be_signed = [0u8; 32];
-        proof_generation_key.ak.clone().write(&mut data_to_be_signed[0..32])
+        proof_generation_key
+            .ak
+            .clone()
+            .write(&mut data_to_be_signed[0..32])
             .expect("message buffer should be 32 bytes");
-        println!("ak inside proof: {:?}", data_to_be_signed);
 
         // This is the result of the re-randomization, we compute it for the caller
         let rk = PublicKey::<Bls12>(proof_generation_key.ak.clone().into()).randomize(
@@ -185,15 +183,8 @@ impl SaplingProvingContext {
             params,
         );
         ///////
-        /*
-        let JUBJUB: JubjubBls12 = { JubjubBls12::new() };
-        let mut rk_bytes = [0u8; 32];
-        let mut party1_vk_bytes = rk_bytes.to_vec();
-        rk.write(&mut party1_vk_bytes);
-        party1_vk_bytes.reverse();
-        let rk = PublicKey::<Bls12>::read(&party1_vk_bytes[..], &JUBJUB).unwrap();
-        */
-//////////
+
+        //////////
 
         // Let's compute the nullifier while we have the position
         let note = Note {
@@ -274,8 +265,6 @@ impl SaplingProvingContext {
 
         Ok((proof, value_commitment, rk))
     }
-
-
 
     /// Create the value commitment and proof for a Sapling OutputDescription,
     /// while accumulating its value commitment randomness inside the context

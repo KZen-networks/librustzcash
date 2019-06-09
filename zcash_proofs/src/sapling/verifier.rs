@@ -68,7 +68,6 @@ impl SaplingVerificationContext {
             .expect("message buffer should be 32 bytes");
         (&mut data_to_be_signed[32..64]).copy_from_slice(&sighash_value[..]);
 
-        println!("RK||M: {:?}", data_to_be_signed.to_vec().clone());
         // Verify the spend_auth_sig
         if !rk.verify(
             &data_to_be_signed,
@@ -76,10 +75,6 @@ impl SaplingVerificationContext {
             FixedGenerators::SpendingKeyGenerator,
             params,
         ) {
-            println!("data_to_be_signed {:?}", data_to_be_signed.to_vec().clone());
-            println!("spend_auth_sig R {:?}", spend_auth_sig.rbar.to_vec().clone());
-            println!("spend_auth_sig s {:?}", spend_auth_sig.sbar.to_vec().clone());
-
             return false;
         }
 
