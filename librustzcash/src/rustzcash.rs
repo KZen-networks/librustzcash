@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 extern crate bellman;
 extern crate blake2_rfc;
 extern crate byteorder;
@@ -356,7 +358,10 @@ pub extern "system" fn librustzcash_to_scalar(
         .expect("length is 32 bytes");
 }
 
-
+use paradise_city::curv::arithmetic::big_gmp::BigInt;
+use paradise_city::curv::arithmetic::traits::Converter;
+use paradise_city::curv::elliptic::curves::curve_jubjub::GE;
+use paradise_city::curv::elliptic::curves::traits::{ECPoint, ECScalar};
 use paradise_city::protocols::two_party::compute_R;
 use paradise_city::protocols::two_party::compute_ak;
 use paradise_city::protocols::two_party::compute_vk;
@@ -375,43 +380,29 @@ use paradise_city::protocols::two_party::party_two::KeyGenFirstMsg as Party2KeyG
 use paradise_city::protocols::two_party::party_two::KeyGenSecondMsg as Party2KeyGenSecondMsg;
 use paradise_city::protocols::two_party::party_two::LocalSignatureMsg as Party2LocalSignatureMsg;
 use paradise_city::protocols::two_party::EcKeyPair;
-use paradise_city::curv::elliptic::curves::traits::{ECPoint, ECScalar};
-use std::env;
 use std::fs;
-use paradise_city::curv::elliptic::curves::curve_jubjub::GE;
-use paradise_city::curv::arithmetic::big_gmp::BigInt;
-use paradise_city::curv::arithmetic::traits::Converter;
-
 
 #[no_mangle]
 pub extern "system" fn librustzcash_ask_to_ak(
-    ask: *const [c_uchar; 32],
+    _ask: *const [c_uchar; 32],
     result: *mut [c_uchar; 32],
 ) {
-    println!("librustzcash_ask_to_ak checkpoint");
-
     // if keygen was called before use the result:
     let data = fs::read_to_string("keys1zcash");
-        let (maybe_ak, party1_keys) = match data{
-           Ok(x) => {
+    let (maybe_ak, _party1_keys) = match data {
+        Ok(x) => {
+            let (ak_party1, party1_keys): (GE, EcKeyPair) = serde_json::from_str(&x).unwrap();
+            let eight: FE = ECScalar::from(&BigInt::from(8));
+            let eight_inv = eight.invert();
+            (ak_party1 * eight_inv, party1_keys)
+        }
+        Err(_) => {
+            let (_, _, ec_key_pair) = Party1KeyGenFirstMsg::create_commitments();
 
-               let (ak_party1, party1_keys):
-               (GE, EcKeyPair)
-                = serde_json::from_str(&x).unwrap();
-               let eight : FE = ECScalar::from(&BigInt::from(8));
-               let eight_inv = eight.invert();
-               (ak_party1 * eight_inv, party1_keys)
-           },
-            Err(_) =>{
-                let (_, _, ec_key_pair) =
-                    Party1KeyGenFirstMsg::create_commitments();
-
-                (ECPoint::generator(), ec_key_pair)
-            }
-        };
+            (ECPoint::generator(), ec_key_pair)
+        }
+    };
     if maybe_ak == ECPoint::generator() {
-
-
         // round 1
         // party1:
         let (party1_first_message, comm_witness, party1_keys) =
@@ -424,7 +415,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
             comm_witness,
             &party2_first_message.d_log_proof,
         )
-            .expect("failed to verify and decommit");
+        .expect("failed to verify and decommit");
         // compute ak:
         let party1_ak = compute_ak(&party1_keys, &party2_first_message.public_share);
         // party2
@@ -432,55 +423,38 @@ pub extern "system" fn librustzcash_ask_to_ak(
             &party1_first_message,
             &party1_second_message,
         )
-            .expect("failed to verify commitments and DLog proof");
+        .expect("failed to verify commitments and DLog proof");
         let party2_ak = compute_ak(
             &party2_keys,
             &party1_second_message.comm_witness.public_share,
         );
 
         assert_eq!(party1_ak, party2_ak);
-//
-      //  let result = unsafe { &mut *result };
-     //   party1_ak.get_element().write(&mut result[..]).expect("length is 32 bytes");
+        //
+        //  let result = unsafe { &mut *result };
+        //   party1_ak.get_element().write(&mut result[..]).expect("length is 32 bytes");
 
         let mut ak = party1_ak.pk_to_key_slice();
-      //  ak.reverse();
+        //  ak.reverse();
         let result = unsafe { &mut *result };
-        for i in (0..32){
+        for i in 0..32 {
             result[i] = ak[i];
         }
         ak.write(&mut result[..]).expect("length is 32 bytes");
 
-        let party1_keygen_json = serde_json::to_string(&(
-            party1_ak,
-            party1_keys,
-        ))
-            .unwrap();
+        let party1_keygen_json = serde_json::to_string(&(party1_ak, party1_keys)).unwrap();
 
-        let party2_keygen_json = serde_json::to_string(&(
-            party2_ak,
-            party2_keys,
-        ))
-            .unwrap();
+        let party2_keygen_json = serde_json::to_string(&(party2_ak, party2_keys)).unwrap();
         fs::write("keys1zcash", party1_keygen_json).expect("Unable to save !");
         fs::write("keys2", party2_keygen_json).expect("Unable to save !");
-
-        println!("ak result if {:?}", result.clone());
-    }
-    else{
-
-      //  let result = unsafe { &mut *result };
-     //   maybe_ak.get_element().write(&mut result[..]).expect("length is 32 bytes");
-
-        let mut ak = maybe_ak.pk_to_key_slice();
-     //   ak.reverse();
+    } else {
+        let ak = maybe_ak.pk_to_key_slice();
         let result = unsafe { &mut *result };
-        for i in (0..32){
+        for i in 0..32 {
             result[i] = ak[i];
         }
 
-        println!("ak result else {:?}", result.clone());
-
+        // this commented code is used to overwrite the parties keygen files
         /*
                 let data = fs::read_to_string("keys2")
                     .expect("Unable to load keys, did you run keygen first? ");
@@ -505,7 +479,6 @@ pub extern "system" fn librustzcash_ask_to_ak(
                 fs::write("keys2", party2_keygen_json).expect("Unable to save !");
         */
     }
-
 }
 
 /*
@@ -604,8 +577,6 @@ fn test_gen_r() {
     repr.read_le(&r2[..]).expect("length is not 32 bytes");
     let _ = Fs::from_repr(repr).unwrap();
 }
-
-
 
 // Private utility function to get Note from C parameters
 fn priv_get_note(
@@ -1193,7 +1164,6 @@ pub extern "system" fn librustzcash_sapling_output_proof(
     true
 }
 
-
 /// Return 32 byte random scalar, uniformly.
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32]) {
@@ -1212,15 +1182,13 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
         .expect("result must be 32 bytes");
 }
 
-
 /// Return 32 byte random scalar, uniformly.
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar; 32]) {
     println!("librustzcash_sapling_generate_alpha checkpoint");
     // round 1
     // party1
-    let (party1_cf_first_message, party1_cf_seed, party1_cf_blinding) =
-        Party1CFFirstMsg::commit();
+    let (party1_cf_first_message, party1_cf_seed, party1_cf_blinding) = Party1CFFirstMsg::commit();
     // party2
     let party2_cf_first_message = Party2CFFirstMsg::share(&party1_cf_first_message);
     // round 2
@@ -1229,28 +1197,15 @@ pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar
         Party1CFSecondMsg::reveal(&party2_cf_first_message, party1_cf_seed, party1_cf_blinding);
 
     // party2
-    let coin_flip_res = CoinFlipResult::finalize(
+    let _coin_flip_res = CoinFlipResult::finalize(
         &party1_cf_second_message,
         &party2_cf_first_message,
         &party1_cf_first_message,
     );
 
     let party1_alpha_bn = party1_alpha.to_big_int();
-   // let zero_array = [0u8; 32];
-  //  let mut zero_vec = zero_array.to_vec();
-    let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-    println!("alpha bytes: {:?}", party1_alpha_bytes.clone());
-    /*
-    party1_alpha_bytes.reverse();
-    println!("alpha gen: {:?}", party1_alpha_bytes.to_vec().clone());
 
-
-    let result = unsafe { &mut *result};
-
-    for i in 0..32 {
-        result[i] = party1_alpha_bytes[i];
-    }
-    */
+    let party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
 
     // reduce to uniform value
     let r = <Bls12 as JubjubEngine>::Fs::to_uniform(&party1_alpha_bytes[..]);
@@ -1258,7 +1213,6 @@ pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar
     r.into_repr()
         .write_le(&mut result[..])
         .expect("result must be 32 bytes");
-    println!("result {:?}", result.clone());
 
     let mut alpha_final_vec = [0u8; 32];
 
@@ -1266,91 +1220,65 @@ pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar
         alpha_final_vec[i] = result[i];
     }
     alpha_final_vec.reverse();
-    let party1_alpha :FE = ECScalar::from(&(BigInt::from(&alpha_final_vec[..])));
-    let party2_alpha :FE = ECScalar::from(&(BigInt::from(&alpha_final_vec[..])));
+    let party1_alpha: FE = ECScalar::from(&(BigInt::from(&alpha_final_vec[..])));
+    let party2_alpha: FE = ECScalar::from(&(BigInt::from(&alpha_final_vec[..])));
 
+    let party1_randomize_json = serde_json::to_string(&(party1_alpha)).unwrap();
 
-    let party1_randomize_json = serde_json::to_string(&(
-        party1_alpha
-    ))
-        .unwrap();
-
-    let party2_randomize_json = serde_json::to_string(&
-                                                          party2_alpha,
-    )
-        .unwrap();
+    let party2_randomize_json = serde_json::to_string(&party2_alpha).unwrap();
     fs::write("party1_alpha", party1_randomize_json).expect("Unable to save !");
     fs::write("party2_alpha", party2_randomize_json).expect("Unable to save !");
 }
 
-
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_sig(
-    ask: *const [c_uchar; 32],
-    ar: *const [c_uchar; 32],
+    _ask: *const [c_uchar; 32],
+    _ar: *const [c_uchar; 32],
     sighash: *const [c_uchar; 32],
     result: *mut [c_uchar; 64],
 ) -> bool {
-
-    println!("ask: {:?}", unsafe{*ask.clone()});
-    println!("ar: {:?}", unsafe{*ar.clone()});
-
     println!("Start Sign");
-    let data = fs::read_to_string("keys1zcash")
-        .expect("Unable to load keys, did you run keygen first? ");
-    let (party1_ak, mut party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+    let data =
+        fs::read_to_string("keys1zcash").expect("Unable to load keys, did you run keygen first? ");
+    let (party1_ak, mut party1_keys): (GE, EcKeyPair) = serde_json::from_str(&data).unwrap();
 
-    let data = fs::read_to_string("keys2")
-        .expect("Unable to load keys, did you run keygen first? ");
-    let (party2_ak, mut party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
+    let data =
+        fs::read_to_string("keys2").expect("Unable to load keys, did you run keygen first? ");
+    let (_party2_ak, mut party2_keys): (GE, EcKeyPair) = serde_json::from_str(&data).unwrap();
 
-    let data = fs::read_to_string("party1_alpha")
-        .expect("Unable to load alpha ");
-    let (party1_alpha): (FE)  = serde_json::from_str(&data).unwrap();
+    let data = fs::read_to_string("party1_alpha").expect("Unable to load alpha ");
+    let (party1_alpha): (FE) = serde_json::from_str(&data).unwrap();
 
-    let data = fs::read_to_string("party2_alpha")
-        .expect("Unable to load alpha ");
-    let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
+    let data = fs::read_to_string("party2_alpha").expect("Unable to load alpha ");
+    let (_party2_alpha): (FE) = serde_json::from_str(&data).unwrap();
 
-    println!("party1_alpha: {:?}", party1_alpha.to_big_int().to_str_radix(16));
-
-    let eight : FE = ECScalar::from(&BigInt::from(8));
+    let eight: FE = ECScalar::from(&BigInt::from(8));
     let eight_inv = eight.invert();
     let public_key = party1_ak * eight_inv.clone();
-    println!("party1_ak {:?}", public_key.pk_to_key_slice().clone());
 
     party1_keys.ak = party1_keys.ak.clone() * eight_inv.clone();
     party2_keys.ak = party2_keys.ak.clone() * eight_inv.clone();
 
-
-    println!("TEST1");
-
     let party1_alpha_bn = party1_alpha.to_big_int();
-    let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-   // party1_alpha_bytes.reverse();
-    let party1_alpha : FE = ECScalar::from(&BigInt::from(&party1_alpha_bytes[..]));
+    let party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
+    // party1_alpha_bytes.reverse();
+    let party1_alpha: FE = ECScalar::from(&BigInt::from(&party1_alpha_bytes[..]));
 
     let party1_vk = compute_vk(&public_key, &party1_alpha);
     let party2_vk = compute_vk(&public_key, &party1_alpha);
-
-    println!("party1_vk {:?}", party1_vk.pk_to_key_slice().clone());
 
     assert_eq!(party1_vk, party2_vk);
 
     // Compute the signature's message for rk/spend_auth_sig
     let mut data_to_be_signed = [0u8; 64];
-    let party1_vk_bytes = party1_vk.pk_to_key_slice();
-   // for i in 0..32{
-   //     data_to_be_signed[i] = party1_vk_bytes[i];
-   // }
-    party1_vk.get_element().write(&mut data_to_be_signed[0..32])
+
+    party1_vk
+        .get_element()
+        .write(&mut data_to_be_signed[0..32])
         .expect("message buffer should be 32 bytes");
-    println!("TEST2");
     (&mut data_to_be_signed[32..64]).copy_from_slice(&(unsafe { &*sighash })[..]);
-    println!("TEST3");
     let message = BigInt::from(&data_to_be_signed[..]);
 
-    println!("data to be signed : {:?}",  data_to_be_signed.to_vec().clone());
     // round 3
     // party1:
     let (party1_eph_first_message, party1_comm_witness, party1_eph_keys) =
@@ -1364,16 +1292,15 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
         party1_comm_witness,
         &party2_eph_first_message,
     )
-        .expect("failed to verify and decommit");
+    .expect("failed to verify and decommit");
     // compute R:
     let party1_R = compute_R(&party1_eph_keys, &party2_eph_first_message.public_share);
     // party2
-    let _party_two_second_message =
-        Party2EphKeyGenSecondMsg::verify_commitments_and_dlog_proof(
-            &party1_eph_first_message,
-            &party1_eph_second_message,
-        )
-            .expect("failed to verify commitments and DLog proof");
+    let _party_two_second_message = Party2EphKeyGenSecondMsg::verify_commitments_and_dlog_proof(
+        &party1_eph_first_message,
+        &party1_eph_second_message,
+    )
+    .expect("failed to verify commitments and DLog proof");
     let party2_R = compute_R(
         &party2_eph_keys,
         &party1_eph_second_message.comm_witness.public_share,
@@ -1400,7 +1327,6 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
         &message,
     );
 
-
     // party1
     let party1_sig = Party1LocalSignatureMsg::compute(
         party1_R,
@@ -1420,42 +1346,32 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
 
     assert_eq!(party1_sig, party2_sig);
 
-
     // serialize sig:
-    let mut r_bytes = party1_sig.R.pk_to_key_slice();
- //   r_bytes.reverse();
+    let r_bytes = party1_sig.R.pk_to_key_slice();
     let r_bytes = &r_bytes[..];
-
 
     let mut s_bytes = BigInt::to_vec(&(party1_sig.s.to_big_int()));
     s_bytes.reverse();
     let s_bytes = &s_bytes[..];
-    let mut rbar = [0u8;32];
-    let mut sbar = [0u8;32];
+    let mut rbar = [0u8; 32];
+    let mut sbar = [0u8; 32];
 
     rbar.clone_from_slice(&r_bytes[..]);
     sbar.clone_from_slice(&s_bytes[..]);
-    println!("TEST4");
 
-    let sig_new = Signature{
-        rbar,
-        sbar,
-    };
-    println!("TEST5");
-
-    println!("r_bytes {:?}", r_bytes.clone());
-    println!("s_bytes {:?}", s_bytes.clone());
+    let sig_new = Signature { rbar, sbar };
 
     // let sig1 = [&r_bytes[..], &s_bytes[..]].concat();
     // Write out the signature
-    sig_new.write(&mut (unsafe { &mut *result })[..])
+    sig_new
+        .write(&mut (unsafe { &mut *result })[..])
         .expect("result should be 64 bytes");
     println!("End Sign");
 
     true
 }
 
-
+// Old code for spend sig
 /*
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_sig(
@@ -1464,7 +1380,6 @@ pub extern "system" fn librustzcash_sapling_spend_sig(
     sighash: *const [c_uchar; 32],
     result: *mut [c_uchar; 64],
 ) -> bool {
-    println!("OMER TEST Sign");
     // The caller provides the re-randomization of `ak`.
     let ar = match Fs::from_repr(read_fs(&(unsafe { &*ar })[..])) {
         Ok(p) => p,
@@ -1545,8 +1460,6 @@ pub extern "system" fn librustzcash_sapling_binding_sig(
     true
 }
 
-
-
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_spend_proof(
     ctx: *mut SaplingProvingContext,
@@ -1564,151 +1477,6 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
 ) -> bool {
     // Grab `ak` from the caller, which should be a point.
     let ak = match edwards::Point::<Bls12, Unknown>::read(&(unsafe { &*ak })[..], &JUBJUB) {
-        Ok(p) => p,
-        Err(_) => {println!("fail 1 "); return false},
-    };
-
-    // `ak` should be prime order.
-    let ak = match ak.as_prime_order(&JUBJUB) {
-        Some(p) => p,
-        None => {println!("fail 2 "); return false},
-    };
-
-    // Grab `nsk` from the caller
-    let nsk = match Fs::from_repr(read_fs(&(unsafe { &*nsk })[..])) {
-        Ok(p) => p,
-        Err(_) => return false,
-    };
-
-    // Construct the proof generation key
-    let proof_generation_key = ProofGenerationKey {
-        ak: ak.clone(),
-        nsk,
-    };
-
-    // Grab the diversifier from the caller
-    let diversifier = sapling_crypto::primitives::Diversifier(unsafe { *diversifier });
-
-    // The caller chooses the note randomness
-    let rcm = match Fs::from_repr(read_fs(&(unsafe { &*rcm })[..])) {
-        Ok(p) => p,
-        Err(_) => return false,
-    };
-
-    // The caller also chooses the re-randomization of ak
-    let ar = match Fs::from_repr(read_fs(&(unsafe { &*ar })[..])) {
-        Ok(p) => p,
-        Err(_) =>{println!("fail 3 "); return false},
-    };
-
-    // We need to compute the anchor of the Spend.
-    let anchor = match Fr::from_repr(read_le(unsafe { &(&*anchor)[..] })) {
-        Ok(p) => p,
-        Err(_) => return false,
-    };
-
-    // The witness contains the incremental tree witness information, in a
-    // weird serialized format.
-    let witness = match CommitmentTreeWitness::from_slice(unsafe { &(&*witness)[..] }) {
-        Ok(w) => w,
-        Err(_) => return false,
-    };
-
-    // Create proof
-    let (proof, value_commitment, rk) = unsafe { &mut *ctx }
-        .spend_proof(
-            proof_generation_key,
-            diversifier,
-            rcm,
-            ar,
-            value,
-            anchor,
-            witness,
-            unsafe { SAPLING_SPEND_PARAMS.as_ref() }.unwrap(),
-            unsafe { SAPLING_SPEND_VK.as_ref() }.unwrap(),
-            &JUBJUB,
-        )
-        .expect("proving should not fail");
-
-    // Write value commitment to caller
-    value_commitment
-        .write(&mut unsafe { &mut *cv }[..])
-        .expect("should be able to serialize cv");
-
-    // Write proof out to caller
-    proof
-        .write(&mut (unsafe { &mut *zkproof })[..])
-        .expect("should be able to serialize a proof");
-
-    // Write out `rk` to the caller
-    rk.write(&mut unsafe { &mut *rk_out }[..])
-        .expect("should be able to write to rk_out");
-
-    true
-}
-
-
-use sapling_crypto::jubjub::JubjubBls12 as jjbls12_l;
-use paradise_city::curv::elliptic::curves::curve_jubjub::FE;
-use std::io::Write;
-
-/*
-#[no_mangle]
-pub extern "system" fn librustzcash_sapling_spend_proof(
-    ctx: *mut SaplingProvingContext,
-    ak: *const [c_uchar; 32],
-    nsk: *const [c_uchar; 32],
-    diversifier: *const [c_uchar; 11],
-    rcm: *const [c_uchar; 32],
-    ar: *const [c_uchar; 32],
-    value: uint64_t,
-    anchor: *const [c_uchar; 32],
-    witness: *const [c_uchar; 1 + 33 * SAPLING_TREE_DEPTH + 8],
-    cv: *mut [c_uchar; 32],
-    rk_out: *mut [c_uchar; 32],
-    zkproof: *mut [c_uchar; GROTH_PROOF_SIZE],
-) -> bool {
-
-
-
-    println!("ak: {:?}", unsafe{*ak.clone()});
-    println!("ar: {:?}", unsafe{*ar.clone()});
-
-    println!("Test Proof 0");
-    let data = fs::read_to_string("keys1zcash")
-        .expect("Unable to load keys, did you run keygen first? ");
-    let (party1_ak, mut party1_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
-
-    let data = fs::read_to_string("keys2")
-        .expect("Unable to load keys, did you run keygen first? ");
-    let (party2_ak, mut party2_keys): (GE, EcKeyPair)  = serde_json::from_str(&data).unwrap();
-
-    let data = fs::read_to_string("party1_alpha")
-        .expect("Unable to load alpha ");
-    let (party1_alpha): (FE)  = serde_json::from_str(&data).unwrap();
-
-    let data = fs::read_to_string("party2_alpha")
-        .expect("Unable to load alpha ");
-    let (party2_alpha): (FE)  = serde_json::from_str(&data).unwrap();
-
-    println!("party1_alpha: {:?}", party1_alpha.clone());
-
-    let eight : FE = ECScalar::from(&BigInt::from(8));
-    let eight_inv = eight.invert();
-    let public_key = party1_ak * eight_inv.clone();
-    println!("party1_ak {:?}", public_key.pk_to_key_slice().clone());
-
-    let mut public_key_vec = public_key.pk_to_key_slice();
-    public_key_vec.reverse();
-    println!("TEST Proof 1");
-
-    let party1_alpha_bn = party1_alpha.to_big_int();
-    let mut party1_alpha_bytes = BigInt::to_vec(&party1_alpha_bn);
-    party1_alpha_bytes.reverse();
-    let party1_alpha : FE = ECScalar::from(&BigInt::from(&party1_alpha_bytes[..]));
-
-    // Grab `ak` from the caller, which should be a point.
-    let ak = match edwards::Point::<Bls12, Unknown>::read(&public_key_vec[..], &JUBJUB) {
         Ok(p) => p,
         Err(_) => return false,
     };
@@ -1741,7 +1509,7 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
     };
 
     // The caller also chooses the re-randomization of ak
-    let ar = match Fs::from_repr(read_fs(&party1_alpha_bytes[..])) {
+    let ar = match Fs::from_repr(read_fs(&(unsafe { &*ar })[..])) {
         Ok(p) => p,
         Err(_) => return false,
     };
@@ -1791,7 +1559,11 @@ pub extern "system" fn librustzcash_sapling_spend_proof(
 
     true
 }
-*/
+
+use paradise_city::curv::elliptic::curves::curve_jubjub::FE;
+use sapling_crypto::jubjub::JubjubBls12 as jjbls12_l;
+use std::io::Write;
+
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_proving_ctx_init() -> *mut SaplingProvingContext {
     let ctx = Box::new(SaplingProvingContext::new());
