@@ -448,6 +448,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
         let party2_keygen_json = serde_json::to_string(&(party2_ak, party2_keys)).unwrap();
         fs::write("keys1zcash", party1_keygen_json).expect("Unable to save !");
         fs::write("keys2", party2_keygen_json).expect("Unable to save !");
+        println!("End KeyGen");
     } else {
         let ak = maybe_ak.pk_to_key_slice();
         let result = unsafe { &mut *result };
@@ -480,7 +481,6 @@ pub extern "system" fn librustzcash_ask_to_ak(
                 fs::write("keys2", party2_keygen_json).expect("Unable to save !");
         */
     }
-    println!("End KeyGen");
 }
 
 /*
