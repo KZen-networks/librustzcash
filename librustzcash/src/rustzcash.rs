@@ -397,6 +397,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
             (ak_party1 * eight_inv, party1_keys)
         }
         Err(_) => {
+            println!("Start KeyGen");
             let (_, _, ec_key_pair) = Party1KeyGenFirstMsg::create_commitments();
 
             (ECPoint::generator(), ec_key_pair)
@@ -479,6 +480,7 @@ pub extern "system" fn librustzcash_ask_to_ak(
                 fs::write("keys2", party2_keygen_json).expect("Unable to save !");
         */
     }
+    println!("End KeyGen");
 }
 
 /*
@@ -1185,7 +1187,6 @@ pub extern "system" fn librustzcash_sapling_generate_r(result: *mut [c_uchar; 32
 /// Return 32 byte random scalar, uniformly.
 #[no_mangle]
 pub extern "system" fn librustzcash_sapling_generate_alpha(result: *mut [c_uchar; 32]) {
-    println!("librustzcash_sapling_generate_alpha checkpoint");
     // round 1
     // party1
     let (party1_cf_first_message, party1_cf_seed, party1_cf_blinding) = Party1CFFirstMsg::commit();
